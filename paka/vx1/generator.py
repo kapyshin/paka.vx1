@@ -51,9 +51,9 @@ def error_callback(text):
     sys.exit(1)
 
 
-def main(argv=sys.argv):
+def main(argv=sys.argv[1:]):
     locale.setlocale(locale.LC_ALL, "C")
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog="paka.vx1")
     parser.add_argument(
         "--blognets-dir", help="dir containing input data (sites and networks)",
         required=True)
