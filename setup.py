@@ -29,8 +29,8 @@ setuptools.setup(
     url="https://github.com/PavloKapyshin/paka.vx1",
     keywords="blog generator static",
     classifiers=[
-        "Development Status :: 4 - Beta",
-        "Intended Audience :: Developers",
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: Other Audience",
         "License :: OSI Approved :: BSD License",
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.7",
