@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="utf-8"?><feed xml:lang="en" xmlns="http://www.w3.org/2005/Atom"><title>Recent notes from py.93z.org</title><link href="http://py.93z.org/notes/" rel="alternate"></link><link href="http://py.93z.org/notes/feed/" rel="self"></link><id>http://py.93z.org/notes/</id><updated>2017-01-02T00:00:00+00:00</updated><author><name>py.93z.org</name></author><subtitle>This is “all things Python” blog. I hope some notes are helpful.</subtitle><entry><title>Automatic HTML escaping in Mako</title><link href="http://py.93z.org/notes/automatic-html-escaping-in-mako/" rel="alternate"></link><updated>2017-01-02T00:00:00+00:00</updated><id>http://py.93z.org/notes/automatic-html-escaping-in-mako/</id><summary type="html">&lt;p&gt;Some developers I know think that &lt;a href="http://makotemplates.org/"&gt;Mako&lt;/a&gt; templating library is “less secure” than, for example, Jinja2 (and, therefore, “must not be used”). Actually, Mako is as “secure” as you’ll configure it.&lt;/p&gt;&lt;p&gt;Though by default Mako does not HTML-escape rendered expressions, it can be configured to do that. When you create lookup (an instance of &lt;code&gt;mako.lookup.TemplateLookup&lt;/code&gt;), you may pass arguments: list of directories to search for templates, encoding of templates, etc. Usually it looks like this:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;import mako.lookup
+
+
+lookup = mako.lookup.TemplateLookup(
+    directories=[os.path.join(..., &amp;quot;templates&amp;quot;)],
+    input_encoding=&amp;quot;utf-8&amp;quot;,
+    filesystem_checks=False,
+    strict_undefined=True)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;So, how to make lookup, as constructed above, escape rendered expressions? In addition to aforementioned arguments, &lt;code&gt;TemplateLookup&lt;/code&gt; accepts &lt;code&gt;default_filters&lt;/code&gt;—a list of filters to use on expressions by default:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;import mako.lookup
+
+
+lookup = mako.lookup.TemplateLookup(
+    directories=[os.path.join(..., &amp;quot;templates&amp;quot;)],
+    input_encoding=&amp;quot;utf-8&amp;quot;,
+    filesystem_checks=False,
+    strict_undefined=True,
+    default_filters=[&amp;quot;h&amp;quot;])
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;For example, &lt;code&gt;pyramid_mako&lt;/code&gt; uses &lt;code&gt;default_filters=[&amp;quot;h&amp;quot;]&lt;/code&gt; by default, so if you’re user of Pyramid framework you may have one less thing to worry about.&lt;/p&gt;&lt;p&gt;Why not &lt;code&gt;default_filters=[&amp;quot;str&amp;quot;, &amp;quot;h&amp;quot;]&lt;/code&gt;? It may seem to work, but not for objects with &lt;code&gt;__html__&lt;/code&gt; method: these will be treated as text that needs escaping, not HTML that should be rendered as-is. Default filters are applied from left to right, so &lt;code&gt;${form.somefield()}&lt;/code&gt; will be transformed, roughly speaking, into &lt;code&gt;h(str(form.somefield()))&lt;/code&gt;—which is, basically, &lt;code&gt;h(form.somefield().__str__())&lt;/code&gt;. As you can clearly see, &lt;code&gt;form.somefield().__html__&lt;/code&gt; will not be called if &lt;code&gt;default_filters&lt;/code&gt; are defined as &lt;code&gt;[&amp;quot;str&amp;quot;, &amp;quot;h&amp;quot;]&lt;/code&gt;.&lt;/p&gt;</summary><category term="mako"></category><category term="pyramid"></category></entry><entry><title>How to create .tar.gz reproducibly (putting it together)</title><link href="http://py.93z.org/notes/how-to-create-.tar.gz-reproducibly/" rel="alternate"></link><updated>2016-11-12T00:00:00+00:00</updated><id>http://py.93z.org/notes/how-to-create-.tar.gz-reproducibly/</id><summary type="html">&lt;p&gt;Though I recommend you to read &lt;a href="/notes/how-to-create-.tar-reproducibly/"&gt;&lt;code&gt;.tar&lt;/code&gt;&lt;/a&gt; and &lt;a href="/notes/how-to-create-.gz-reproducibly/"&gt;&lt;code&gt;.gz&lt;/code&gt;&lt;/a&gt; notes, where internals and features of these file formats and relevant modules from CPython standard library are discussed, you are free to skip them it you are in rush and need just code, because here we’ll do just that: code :)&lt;/p&gt;&lt;p&gt;Yes, here we are to make a script (&lt;code&gt;mktgz.py&lt;/code&gt;) that’ll take paths to files and dirs and make &lt;code&gt;.tar.gz&lt;/code&gt;—compressed archive.&lt;/p&gt;&lt;pre&gt;&lt;code&gt;#!/usr/bin/env python3
+
+import os
+import gzip
+import tarfile
+import argparse
+
+
+def tgz(top_paths, *, mtime, dest, reltop, filename, verbose):
+    relpath = lambda p: os.path.relpath(p, start=reltop)
+    def _get_to_add():
+        for top_path in sorted(top_paths):
+            if os.path.isdir(top_path):
+                for dirpath, dirnames, filenames in os.walk(
+                        top_path, topdown=True):
+                    dirnames.sort()
+                    yield (dirpath, relpath(dirpath))
+                    for filename in sorted(filenames):
+                        filepath = os.path.join(dirpath, filename)
+                        yield (filepath, relpath(filepath))
+            else:
+                yield (top_path, relpath(top_path))
+    with open(dest, &amp;quot;wb&amp;quot;) as _dest_file:
+        with gzip.GzipFile(
+                fileobj=_dest_file, mode=&amp;quot;w&amp;quot;,
+                filename=filename, mtime=mtime) as dest_file:
+            with tarfile.open(fileobj=dest_file, mode=&amp;quot;w&amp;quot;) as archive:
+                for path, arcname in _get_to_add():
+                    if verbose:
+                        print(path, &amp;quot;-&amp;gt;&amp;quot;, arcname)
+                    tinfo = archive.gettarinfo(path, arcname=arcname)
+                    if mtime is not None:
+                        tinfo.mtime = mtime
+                    if tinfo.isreg():
+                        with open(path, &amp;quot;rb&amp;quot;) as file:
+                            archive.addfile(tinfo, fileobj=file)
+                    else:
+                        archive.addfile(tinfo)
+
+
+if __name__ == &amp;quot;__main__&amp;quot;:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(&amp;quot;paths&amp;quot;, nargs=&amp;quot;+&amp;quot;)
+    parser.add_argument(&amp;quot;--reltop&amp;quot;, default=os.getcwd())
+    parser.add_argument(&amp;quot;--mtime&amp;quot;, type=float, default=None)
+    parser.add_argument(&amp;quot;--filename&amp;quot;, default=None)
+    parser.add_argument(&amp;quot;--verbose&amp;quot;, action=&amp;quot;store_true&amp;quot;, default=False)
+    parser.add_argument(&amp;quot;dest&amp;quot;)
+    args = parser.parse_args()
+    tgz(
+        args.paths, mtime=args.mtime, dest=args.dest, reltop=args.reltop,
+        filename=args.filename, verbose=args.verbose)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Few quick notes about code. First, same &lt;code&gt;mtime&lt;/code&gt; value is used for both “tar” and “gzip” parts of code. Second, &lt;a href="https://docs.python.org/3.5/library/gzip.html#gzip.GzipFile"&gt;&lt;code&gt;gzip.GzipFile&lt;/code&gt;&lt;/a&gt; is used instead of &lt;a href="https://docs.python.org/3.5/library/gzip.html#gzip.open"&gt;&lt;code&gt;gzip.open&lt;/code&gt;&lt;/a&gt; because the latter does not accept &lt;code&gt;filename&lt;/code&gt; and &lt;code&gt;mtime&lt;/code&gt; arguments. Oh, and if you are puzzled about &lt;code&gt;reltop&lt;/code&gt;, please read the &lt;a href="/notes/how-to-create-.tar-reproducibly/"&gt;note about tar&lt;/a&gt;, &lt;code&gt;reltop&lt;/code&gt;’s purpose is explained there.&lt;/p&gt;&lt;p&gt;Example usage:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;$ ./mktgz.py dir1/ file2 dir2/ file1 out.tar.gz --mtime 0 --filename '' --verbose
+dir1/ -&amp;gt; dir1
+dir1/1 -&amp;gt; dir1/1
+dir1/1/a -&amp;gt; dir1/1/a
+dir1/1/b -&amp;gt; dir1/1/b
+dir1/1/c -&amp;gt; dir1/1/c
+dir1/1/d -&amp;gt; dir1/1/d
+dir1/2 -&amp;gt; dir1/2
+dir1/2/aa -&amp;gt; dir1/2/aa
+dir1/2/bb -&amp;gt; dir1/2/bb
+dir1/2/cc -&amp;gt; dir1/2/cc
+dir1/2/dd -&amp;gt; dir1/2/dd
+dir1/3 -&amp;gt; dir1/3
+dir1/3/aaa -&amp;gt; dir1/3/aaa
+dir1/3/bbb -&amp;gt; dir1/3/bbb
+dir1/3/ccc -&amp;gt; dir1/3/ccc
+dir1/3/ddd -&amp;gt; dir1/3/ddd
+dir2/ -&amp;gt; dir2
+file1 -&amp;gt; file1
+file2 -&amp;gt; file2
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;As we expect, &lt;code&gt;out.tar.gz&lt;/code&gt; is a gzip file:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;$ file out.tar.gz
+out.tar.gz: gzip compressed data, max compression
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;And &lt;code&gt;tar&lt;/code&gt; also works with &lt;code&gt;out.tar.gz&lt;/code&gt; as expected:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;$ tar tvf out.tar.gz
+drwxrwxr-x u/u             0 1970-01-01 03:00 dir1/
+drwxrwxr-x u/u             0 1970-01-01 03:00 dir1/1/
+-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/1/a
+-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/1/b
+-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/1/c
+-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/1/d
+drwxrwxr-x u/u             0 1970-01-01 03:00 dir1/2/
+-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/2/aa
+-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/2/bb
+-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/2/cc
+-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/2/dd
+drwxrwxr-x u/u             0 1970-01-01 03:00 dir1/3/
+-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/3/aaa
+-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/3/bbb
+-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/3/ccc
+-rw-rw-r-- u/u             7 1970-01-01 03:00 dir1/3/ddd
+drwxrwxr-x u/u             0 1970-01-01 03:00 dir2/
+-rw-rw-r-- u/u            10 1970-01-01 03:00 file1
+-rw-rw-r-- u/u            17 1970-01-01 03:00 file2
+&lt;/code&gt;&lt;/pre&gt;</summary><category term="cpython"></category></entry><entry><title>How to create .gz reproducibly</title><link href="http://py.93z.org/notes/how-to-create-.gz-reproducibly/" rel="alternate"></link><updated>2016-11-11T00:00:00+00:00</updated><id>http://py.93z.org/notes/how-to-create-.gz-reproducibly/</id><summary type="html">&lt;p&gt;Essentially, gzip file consists of “members”, each represented by following diagram:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;+---+---+--+---+---+---+---+---+---+--+     +=========================================+
+|___|___|__|FLG|     MTIME     |___|OS| ... |...original file name, zero-terminated...|
++---+---+--+---+---+---+---+---+---+--+     +=========================================+
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Member parts not relevant to our discussion are not named, shown or described, but, if you want specifics, you can look at &lt;a href="https://tools.ietf.org/html/rfc1952"&gt;GZIP file format specification version 4.3 (RFC 1952)&lt;/a&gt; and &lt;a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py"&gt;&lt;code&gt;gzip&lt;/code&gt; module implementation&lt;/a&gt;.&lt;/p&gt;&lt;p&gt;&lt;code&gt;FLG&lt;/code&gt; is a flag byte that may indicate presence of original file name; as done in Python’s &lt;a href="https://docs.python.org/3.5/library/gzip.html"&gt;&lt;code&gt;gzip&lt;/code&gt; module&lt;/a&gt; (more precisely, in &lt;a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l235"&gt;&lt;code&gt;GzipFile._write_gzip_header&lt;/code&gt;&lt;/a&gt;):&lt;/p&gt;&lt;pre&gt;&lt;code&gt;if fname:
+    flags = FNAME
+# ...
+if fname:
+    self.fileobj.write(fname + b'\000')
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;code&gt;MTIME&lt;/code&gt; is “the most recent modification time of the original file being compressed” and “if the compressed data did not come from a file, &lt;code&gt;MTIME&lt;/code&gt; is set to the time at which compression started”. In Python optional &lt;code&gt;mtime&lt;/code&gt; argument (POSIX timestamp) is taken and &lt;a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l187"&gt;set to &lt;code&gt;self._write_mtime&lt;/code&gt;&lt;/a&gt; in &lt;a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l123"&gt;constructor of &lt;code&gt;GzipFile&lt;/code&gt;&lt;/a&gt;. Then &lt;code&gt;self._write_mtime&lt;/code&gt; is &lt;a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l238"&gt;used in &lt;code&gt;_write_gzip_header&lt;/code&gt;&lt;/a&gt; method:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;mtime = self._write_mtime
+if mtime is None:
+    mtime = time.time()
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Finally, &lt;code&gt;OS&lt;/code&gt; indicates the type of file system, and in Python’s &lt;code&gt;gzip&lt;/code&gt; it is &lt;a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l243"&gt;set to 255&lt;/a&gt;—“Unknown”:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;self.fileobj.write(b'\377')
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;If you are not sure why 255, &lt;code&gt;b'\377'&lt;/code&gt; is &lt;code&gt;0xff&lt;/code&gt;, which is indeed 255:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;&amp;gt;&amp;gt;&amp;gt; b'\377'
+b'\xff'
+&amp;gt;&amp;gt;&amp;gt; 0xff
+255
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;I guess “Unknown” value for &lt;code&gt;OS&lt;/code&gt; is hardcoded in &lt;code&gt;gzip&lt;/code&gt; library to ensure portability.&lt;/p&gt;&lt;p&gt;So, when you are making a gzip file, there are two result-influencing factors: original &lt;code&gt;filename&lt;/code&gt;s and &lt;code&gt;timestamp&lt;/code&gt;s that are kept in members of file (type of filesystem—&lt;code&gt;OS&lt;/code&gt;—is set by Python’s &lt;code&gt;gzip&lt;/code&gt; library, so no need to worry about it).&lt;/p&gt;&lt;h2&gt;Implementation&lt;/h2&gt;&lt;p&gt;Our goal is to build a script (&lt;code&gt;mkgz.py&lt;/code&gt;) that creates gzip file containing file pointed to by path passed as a command-line argument.&lt;/p&gt;&lt;pre&gt;&lt;code&gt;#!/usr/bin/env python3
+
+import gzip
+import shutil
+import argparse
+
+
+def gz(path, *, mtime, filename, dest):
+    with open(path, &amp;quot;rb&amp;quot;) as src_file, open(dest, &amp;quot;wb&amp;quot;) as _dest_file:
+        with gzip.GzipFile(
+                fileobj=_dest_file, mode=&amp;quot;w&amp;quot;,
+                filename=filename, mtime=mtime) as dest_file:
+            shutil.copyfileobj(src_file, dest_file)
+
+
+if __name__ == &amp;quot;__main__&amp;quot;:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(&amp;quot;path&amp;quot;)
+    parser.add_argument(&amp;quot;--mtime&amp;quot;, type=float, default=None)
+    parser.add_argument(&amp;quot;--filename&amp;quot;, default=None)
+    parser.add_argument(&amp;quot;dest&amp;quot;)
+    args = parser.parse_args()
+    gz(args.path, mtime=args.mtime, filename=args.filename, dest=args.dest)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;So, having tar archive &lt;code&gt;out1.tar&lt;/code&gt;, we could use &lt;code&gt;./mkgz.py out1.tar out1.tar.gz&lt;/code&gt; command to create gzip file &lt;code&gt;out1.tar.gz&lt;/code&gt;, but it would contain timestamp and filename (command to get such output is &lt;code&gt;file out1.tar.gz&lt;/code&gt;):&lt;/p&gt;&lt;pre&gt;&lt;code&gt;out1.tar.gz: gzip compressed data, was &amp;quot;out1.tar&amp;quot;, last modified: Fri Nov 11 00:00:07 2016, max compression
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;As you may have noticed, &lt;code&gt;mkgz.py&lt;/code&gt; can accept &lt;code&gt;--mtime&lt;/code&gt; and &lt;code&gt;--filename&lt;/code&gt; command-line arguments: they are passed to &lt;a href="https://docs.python.org/3.5/library/gzip.html#gzip.GzipFile"&gt;&lt;code&gt;gzip.GzipFile&lt;/code&gt;&lt;/a&gt; constructor. Let’s use these arguments:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;$ ./mkgz.py out2.tar out2.tar.gz --mtime 1.23 --filename ''
+$ file out2.tar.gz
+out2.tar.gz: gzip compressed data, last modified: Thu Jan  1 00:00:01 1970, max compression
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;As we can see above, timestamp (“last modified”) is set to one we passed as &lt;code&gt;--mtime 1.23&lt;/code&gt;. &lt;code&gt;filename&lt;/code&gt; is set to empty string.&lt;/p&gt;&lt;p&gt;Let’s make two more gzip files where only filename will vary:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;$ ./mkgz.py out3.tar out3.tar.gz --mtime 1.23
+$ ./mkgz.py out3.tar out4.tar.gz --mtime 1.23 --filename ''
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;If you’ll compare outputs of &lt;code&gt;hd out3.tar.gz | sed 2q&lt;/code&gt; and &lt;code&gt;hd out4.tar.gz | sed 2q&lt;/code&gt;, you’d see that &lt;code&gt;out3.tar.gz&lt;/code&gt; indeed contains filename of &lt;code&gt;out3.tar&lt;/code&gt; (while &lt;code&gt;out4.tar.gz&lt;/code&gt; does not):&lt;/p&gt;&lt;pre&gt;&lt;code&gt;00000000  1f 8b 08 08 01 00 00 00  02 ff 6f 75 74 33 2e 74  |..........out3.t|
+00000010  61 72 00 ed 9b 41 6e c2  30 10 45 bd f6 29 72 83  |ar...An.0.E..)r.|
+&lt;/code&gt;&lt;/pre&gt;&lt;pre&gt;&lt;code&gt;00000000  1f 8b 08 00 01 00 00 00  02 ff ed 9b 41 6e c2 30  |............An.0|
+00000010  10 45 bd f6 29 72 83 7a  6c 8f 7d 9e 24 a6 2a 52  |.E..)r.zl.}.$.*R|
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Now that we looked at &lt;a href="/notes/how-to-create-.tar-reproducibly/"&gt;tar&lt;/a&gt; and gzip separately, we can proceed and &lt;a href="/notes/how-to-create-.tar.gz-reproducibly/"&gt;combine them&lt;/a&gt;.&lt;/p&gt;</summary><category term="cpython"></category></entry><entry><title>How to create .tar reproducibly</title><link href="http://py.93z.org/notes/how-to-create-.tar-reproducibly/" rel="alternate"></link><updated>2016-11-10T00:00:00+00:00</updated><id>http://py.93z.org/notes/how-to-create-.tar-reproducibly/</id><summary type="html">&lt;p&gt;Given that in &lt;a href="https://docs.python.org/3.5/library/tarfile.html"&gt;&lt;code&gt;tarfile&lt;/code&gt;&lt;/a&gt; default for &lt;code&gt;format&lt;/code&gt; argument of &lt;code&gt;tarfile.TarFile&lt;/code&gt; is &lt;a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/tarfile.py#l106"&gt;&lt;code&gt;GNU_FORMAT&lt;/code&gt;&lt;/a&gt;, I will use GNU &lt;code&gt;tar&lt;/code&gt;, not &lt;a href="http://pubs.opengroup.org/onlinepubs/9699919799/utilities/pax.html"&gt;POSIX&lt;/a&gt;, but in aspects I care about for this note they are very similar.&lt;/p&gt;&lt;p&gt;Tar archive is comprised of sequence of “file entries”. Each entry consists of header (metadata) and contents (data). Header contains &lt;code&gt;mtime&lt;/code&gt; field, that represents file modification time at the time of archivation. In Python’s &lt;code&gt;tarfile&lt;/code&gt; archive entries are represented by instances of &lt;a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/tarfile.py#l720"&gt;&lt;code&gt;tarfile.TarInfo&lt;/code&gt;&lt;/a&gt;, and &lt;code&gt;mtime&lt;/code&gt; field of file entry header is represented by public field of &lt;code&gt;tarfile.TarInfo&lt;/code&gt; instance. This is all specifics you need to know about tar archive format, but if you want non-simplified description, consult, for example, the &lt;a href="https://www.gnu.org/software/tar/manual/html_node/Standard.html"&gt;relevant section&lt;/a&gt; of GNU &lt;code&gt;tar&lt;/code&gt; manual.&lt;/p&gt;&lt;p&gt;So, when you are making a tar archive, there are 2 ways in which you can influence end result:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;add files in particular order;&lt;/li&gt;&lt;li&gt;set added files’ modification time (&lt;code&gt;mtime&lt;/code&gt;).&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;If (for your goals) you consider two identical files with differing &lt;code&gt;mtime&lt;/code&gt; different, you don’t have to worry about it (but still you may want to add files in order). Otherwise, you’ll have to set it to some fixed value to make it irrelevant.&lt;/p&gt;&lt;p&gt;I am talking about realistic scenario, so it should be possible to add not just regular files, but also directories (recursively). Given that in such case we still care about file order, I will not use &lt;a href="https://docs.python.org/3.5/library/tarfile.html#tarfile.TarFile.add"&gt;&lt;code&gt;TarFile.add&lt;/code&gt;&lt;/a&gt;: it &lt;a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/tarfile.py#l1950"&gt;uses&lt;/a&gt; the &lt;a href="https://docs.python.org/3.5/library/os.html#os.listdir"&gt;&lt;code&gt;os.listdir&lt;/code&gt;&lt;/a&gt;, that returns a list of dir entries in arbitrary order—and &lt;code&gt;TarFile.add&lt;/code&gt; does not sort it nor allow us to do that:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;for f in os.listdir(name):
+    self.add(...)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Instead for for recursing into dirs I’ll use &lt;a href="https://docs.python.org/3.5/library/os.html#os.walk"&gt;&lt;code&gt;os.walk&lt;/code&gt;&lt;/a&gt;. Though it uses &lt;a href="https://docs.python.org/3.5/library/os.html#os.scandir"&gt;&lt;code&gt;os.scandir&lt;/code&gt;&lt;/a&gt; internally (&lt;code&gt;os.listdir&lt;/code&gt; in CPython &amp;lt; 3.5), which does not guarantee any ordering too, it is &lt;a href="https://docs.python.org/3.5/library/os.html#os.walk"&gt;possible&lt;/a&gt; to affect &lt;code&gt;walk&lt;/code&gt; so it does its work in particular order:&lt;/p&gt;&lt;blockquote&gt;&lt;p&gt;When &lt;code&gt;topdown&lt;/code&gt; is &lt;code&gt;True&lt;/code&gt;, the caller can modify the &lt;code&gt;dirnames&lt;/code&gt; list in-place (perhaps using &lt;code&gt;del&lt;/code&gt; or slice assignment), and &lt;code&gt;walk()&lt;/code&gt; will only recurse into the subdirectories whose names remain in &lt;code&gt;dirnames&lt;/code&gt;; this can be used to prune the search, &lt;strong&gt;impose a specific order of visiting&lt;/strong&gt;, or even to inform &lt;code&gt;walk()&lt;/code&gt; about directories the caller creates or renames before it resumes &lt;code&gt;walk()&lt;/code&gt; again. Modifying &lt;code&gt;dirnames&lt;/code&gt; when &lt;code&gt;topdown&lt;/code&gt; is &lt;code&gt;False&lt;/code&gt; has no effect on the behavior of the walk, because in bottom-up mode the directories in &lt;code&gt;dirnames&lt;/code&gt; are generated before &lt;code&gt;dirpath&lt;/code&gt; itself is generated.&lt;/p&gt;&lt;/blockquote&gt;&lt;p&gt;Thus, code that always traverses all dirs and files in &lt;code&gt;top_dir&lt;/code&gt; is same order will look like this:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;for dirpath, dirnames, filenames in os.walk(top_dir, topdown=True):
+    dirnames.sort()
+    # ...
+    for filename in sorted(filenames):
+        # ...
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;To add file entries (that is, regular files, dirs, etc.) into archive I’ll use &lt;a href="https://docs.python.org/3.5/library/tarfile.html#tarfile.TarFile.addfile"&gt;&lt;code&gt;TarFile.addfile&lt;/code&gt;&lt;/a&gt; instead of &lt;code&gt;TarFile.add&lt;/code&gt;. Therefore, in general, &lt;code&gt;tarfile&lt;/code&gt;-related code will look like this:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;with tarfile.open(name=&amp;quot;out.tar&amp;quot;, mode=&amp;quot;w&amp;quot;) as archive:
+    for path, arcname in ...:
+        tinfo = archive.gettarinfo(path, arcname=arcname)
+        tinfo.mtime = 123123.1
+        if tinfo.isreg():
+            with open(path, &amp;quot;rb&amp;quot;) as file:
+                archive.addfile(tinfo, fileobj=file)
+        else:
+            archive.addfile(tinfo)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Before getting to actual implementation, let’s discuss one more concept: arcnames. Arcname is name of file in archive, and it can, actually, be path: that is, it can be &lt;code&gt;control.txt&lt;/code&gt; as well as &lt;code&gt;somedir/1.txt&lt;/code&gt; or &lt;code&gt;/home/user/some/file&lt;/code&gt;. For our purposes, having absolute file paths in archive is undesirable, so we have to “modify” them in a way that ensures arcnames do not include parents of “top dirs” we intend to add into archive.&lt;/p&gt;&lt;h2&gt;Implementation&lt;/h2&gt;&lt;p&gt;The goal is to build a script (&lt;code&gt;mktar.py&lt;/code&gt;) that creates tar archive containing files and directories: paths are passed as command-line arguments.&lt;/p&gt;&lt;pre&gt;&lt;code&gt;#!/usr/bin/env python3
+
+import os
+import tarfile
+import argparse
+
+
+def tar(top_paths, *, mtime, dest, reltop, verbose):
+    relpath = lambda p: os.path.relpath(p, start=reltop)
+    def _get_to_add():
+        for top_path in sorted(top_paths):
+            if os.path.isdir(top_path):
+                for dirpath, dirnames, filenames in os.walk(
+                        top_path, topdown=True):
+                    dirnames.sort()
+                    yield (dirpath, relpath(dirpath))
+                    for filename in sorted(filenames):
+                        filepath = os.path.join(dirpath, filename)
+                        yield (filepath, relpath(filepath))
+            else:
+                yield (top_path, relpath(top_path))
+    with tarfile.open(name=dest, mode=&amp;quot;w&amp;quot;) as archive:
+        for path, arcname in _get_to_add():
+            if verbose:
+                print(path, &amp;quot;-&amp;gt;&amp;quot;, arcname)
+            tinfo = archive.gettarinfo(path, arcname=arcname)
+            if mtime is not None:
+                tinfo.mtime = mtime
+            if tinfo.isreg():
+                with open(path, &amp;quot;rb&amp;quot;) as file:
+                    archive.addfile(tinfo, fileobj=file)
+            else:
+                archive.addfile(tinfo)
+
+
+if __name__ == &amp;quot;__main__&amp;quot;:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(&amp;quot;paths&amp;quot;, nargs=&amp;quot;+&amp;quot;)
+    parser.add_argument(&amp;quot;--reltop&amp;quot;, default=os.getcwd())
+    parser.add_argument(&amp;quot;--mtime&amp;quot;, type=float, default=None)
+    parser.add_argument(&amp;quot;--verbose&amp;quot;, action=&amp;quot;store_true&amp;quot;, default=False)
+    parser.add_argument(&amp;quot;dest&amp;quot;)
+    args = parser.parse_args()
+    tar(
+        args.paths, mtime=args.mtime, dest=args.dest, reltop=args.reltop,
+        verbose=args.verbose)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;So, for example, to create archive &lt;code&gt;out.tar&lt;/code&gt; with &lt;code&gt;mtime&lt;/code&gt; pre-set to &lt;code&gt;123&lt;/code&gt;, you’d use &lt;code&gt;./mktar.py dir1/ file1 dir2/ file2 out.tar --mtime 123&lt;/code&gt;. If, say, &lt;code&gt;dir{1,2}&lt;/code&gt; and &lt;code&gt;file{1,2}&lt;/code&gt; are in &lt;code&gt;reproducible_tar/&lt;/code&gt;, and you want it to be “root” inside an archive, you could use &lt;code&gt;--reltop ../&lt;/code&gt; to modify “relative top dir” (&lt;code&gt;reltop&lt;/code&gt;), so arcnames will be built like this (command is &lt;code&gt;./mktar.py dir1/ file1 dir2/ file2 out.tar --mtime 123 --reltop ../ --verbose&lt;/code&gt; and is run from inside &lt;code&gt;reproducible_tar/&lt;/code&gt;):&lt;/p&gt;&lt;pre&gt;&lt;code&gt;dir1/ -&amp;gt; reproducible_tar/dir1
+dir1/1 -&amp;gt; reproducible_tar/dir1/1
+dir1/1/a -&amp;gt; reproducible_tar/dir1/1/a
+dir1/1/b -&amp;gt; reproducible_tar/dir1/1/b
+dir1/1/c -&amp;gt; reproducible_tar/dir1/1/c
+dir1/1/d -&amp;gt; reproducible_tar/dir1/1/d
+dir1/2 -&amp;gt; reproducible_tar/dir1/2
+dir1/2/aa -&amp;gt; reproducible_tar/dir1/2/aa
+dir1/2/bb -&amp;gt; reproducible_tar/dir1/2/bb
+dir1/2/cc -&amp;gt; reproducible_tar/dir1/2/cc
+dir1/2/dd -&amp;gt; reproducible_tar/dir1/2/dd
+dir1/3 -&amp;gt; reproducible_tar/dir1/3
+dir1/3/aaa -&amp;gt; reproducible_tar/dir1/3/aaa
+dir1/3/bbb -&amp;gt; reproducible_tar/dir1/3/bbb
+dir1/3/ccc -&amp;gt; reproducible_tar/dir1/3/ccc
+dir1/3/ddd -&amp;gt; reproducible_tar/dir1/3/ddd
+dir2/ -&amp;gt; reproducible_tar/dir2
+file1 -&amp;gt; reproducible_tar/file1
+file2 -&amp;gt; reproducible_tar/file2
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Now we have working implementation of reproducible tar building, and we can &lt;a href="/notes/how-to-create-.gz-reproducibly/"&gt;look at gzip&lt;/a&gt;.&lt;/p&gt;</summary><category term="cpython"></category></entry><entry><title>Reproducible builds and django.utils.feedgenerator</title><link href="http://py.93z.org/notes/reproducible-builds-and-django.utils.feedgenerator/" rel="alternate"></link><updated>2016-06-20T00:00:00+00:00</updated><id>http://py.93z.org/notes/reproducible-builds-and-django.utils.feedgenerator/</id><summary type="html">&lt;p&gt;Recently I’ve been working towards making builds of this blog reproducible. My goal was to allow use of regular &lt;code&gt;diff&lt;/code&gt; for spotting differences between resulting files.&lt;/p&gt;&lt;p&gt;But there was a problem. &lt;a href="https://tools.ietf.org/html/rfc4287"&gt;Atom 1.0&lt;/a&gt; feeds (e.g., &lt;a href="/notes/feed/"&gt;/notes/feed/&lt;/a&gt;, &lt;a href="/tags/django/feed/"&gt;/tags/django/feed/&lt;/a&gt;) are generated with my fork of &lt;code&gt;django.utils.feedgenerator&lt;/code&gt;. Both original and fork use &lt;code&gt;xml.sax.saxutils.XMLGenerator&lt;/code&gt; (implementation of &lt;a href="https://docs.python.org/3.4/library/xml.sax.handler.html#xml.sax.handler.ContentHandler"&gt;&lt;code&gt;ContentHandler&lt;/code&gt;&lt;/a&gt; interface) subclass called &lt;code&gt;SimplerXMLGenerator&lt;/code&gt; for XML generation, and both pass elements’ attributes into &lt;a href="https://docs.python.org/3.4/library/xml.sax.handler.html#xml.sax.handler.ContentHandler.startElement"&gt;&lt;code&gt;startElement&lt;/code&gt;&lt;/a&gt; and &lt;a href="https://docs.python.org/3.4/library/xml.sax.handler.html#xml.sax.handler.ContentHandler.startElementNS"&gt;&lt;code&gt;startElementNS&lt;/code&gt;&lt;/a&gt; as regular &lt;code&gt;dict&lt;/code&gt;s. This caused random ordering of XML elements’ attributes in resulting feeds: textually feeds were changing, while semantically they were not. Despite being inconvenient for my use case (when use of specialized tools for XML comparison is undesirable), such behavior is, according to &lt;a href="https://www.w3.org/TR/2008/REC-xml-20081126/#sec-starttags"&gt;specification&lt;/a&gt;, valid:&lt;/p&gt;&lt;blockquote&gt;&lt;p&gt;Note that the order of attribute specifications in a start-tag or empty-element tag is not significant.&lt;/p&gt;&lt;/blockquote&gt;&lt;p&gt;So I decided to take advantage of that. Both &lt;code&gt;startElement&lt;/code&gt; and &lt;code&gt;startElementNS&lt;/code&gt; methods assume that &lt;code&gt;attrs&lt;/code&gt; argument is an object that behaves like mapping (see lines &lt;a href="https://hg.python.org/cpython/file/dfc57c66a670/Lib/xml/sax/saxutils.py#l170"&gt;170&lt;/a&gt; and &lt;a href="https://hg.python.org/cpython/file/dfc57c66a670/Lib/xml/sax/saxutils.py#l195"&gt;195&lt;/a&gt; of &lt;code&gt;Lib/xml/sax/saxutils.py&lt;/code&gt;). &lt;a href="https://docs.python.org/3.4/library/collections.html#collections.OrderedDict"&gt;&lt;code&gt;OrderedDict&lt;/code&gt;&lt;/a&gt; is a mapping (like &lt;code&gt;dict&lt;/code&gt; is), therefore it is possible to provide &lt;code&gt;attrs&lt;/code&gt; (attributes of XML element) as an instance of &lt;code&gt;OrderedDict&lt;/code&gt; to preserve order of attributes. Least intrusive change—it’s a fork, after all—is to override two mentioned methods and sort &lt;code&gt;attrs&lt;/code&gt; there (&lt;code&gt;_order_attrs&lt;/code&gt;) before passing to implementation of superclass (&lt;code&gt;XMLGenerator&lt;/code&gt;):&lt;/p&gt;&lt;pre&gt;&lt;code&gt;import operator
+import collections
+from xml.sax.saxutils import XMLGenerator
+
+
+_order_attrs_key = operator.itemgetter(0)
+
+
+def _order_attrs(attrs):
+    return collections.OrderedDict(
+        sorted(attrs.items(), key=_order_attrs_key))
+
+
+class SimplerXMLGenerator(XMLGenerator):
+
+    def startElement(self, name, attrs):
+        return super().startElement(name, _order_attrs(attrs))
+
+    def startElementNS(self, name, qname, attrs):
+        return super().startElementNS(name, qname, _order_attrs(attrs))
+
+    # ...here goes the rest (already present in feedgenerator)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;That’s what I did. Now my blog engine does not randomly reorder attributes in feeds, and the latter are still perfectly valid XML :).&lt;/p&gt;</summary><category term="django"></category><category term="xml"></category></entry><entry><title>How to determine file where particular function is defined</title><link href="http://py.93z.org/notes/how-to-determine-file-where-particular-function-is-defined/" rel="alternate"></link><updated>2016-04-05T00:00:00+00:00</updated><id>http://py.93z.org/notes/how-to-determine-file-where-particular-function-is-defined/</id><summary type="html">&lt;p&gt;...at execution time, given that all you have is an instance of function object:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;&amp;gt;&amp;gt;&amp;gt; type(func)
+&amp;lt;class 'function'&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Knowing where it is defined may save you some time during debugging session: say, when you are not sure that function you are dealing with is imported from “correct” location. Despite being easy, such sanity check may help.&lt;/p&gt;&lt;p&gt;Most obvious option is to use &lt;code&gt;co_filename&lt;/code&gt; attribute of function’s code:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;&amp;gt;&amp;gt;&amp;gt; func.__code__.co_filename
+'/home/user/.../something.py'
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;This also may work with methods:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;&amp;gt;&amp;gt;&amp;gt; class SomeClass:
+...     def some_method(self):
+...         pass
+... 
+&amp;gt;&amp;gt;&amp;gt; obj = SomeClass()
+&amp;gt;&amp;gt;&amp;gt; obj.some_method.__code__.co_filename
+'&amp;lt;stdin&amp;gt;'
+&amp;gt;&amp;gt;&amp;gt; obj.some_method.__func__.__code__.co_filename
+'&amp;lt;stdin&amp;gt;'
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Usually it’s better to use &lt;code&gt;inspect.getsourcefile&lt;/code&gt; (that uses &lt;code&gt;inspect.getfile&lt;/code&gt;, which uses something similar to above, but in more consistent way—for many different types):&lt;/p&gt;&lt;pre&gt;&lt;code&gt;&amp;gt;&amp;gt;&amp;gt; import inspect
+&amp;gt;&amp;gt;&amp;gt; inspect.getsourcefile(func)
+'/home/user/.../something.py'
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;But if &lt;code&gt;func&lt;/code&gt; is defined in CPython extension (that is shared library which uses C API), &lt;code&gt;inspect.getsourcefile&lt;/code&gt; will fail with &lt;code&gt;TypeError&lt;/code&gt;:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;&amp;gt;&amp;gt;&amp;gt; inspect.getsourcefile(func)
+Traceback (most recent call last):
+  File &amp;quot;&amp;lt;stdin&amp;gt;&amp;quot;, line 1, in &amp;lt;module&amp;gt;
+  File &amp;quot;/home/user/.../lib/python3.4/inspect.py&amp;quot;, line 571, in getsourcefile
+    filename = getfile(object)
+  File &amp;quot;/home/user/.../lib/python3.4/inspect.py&amp;quot;, line 536, in getfile
+    'function, traceback, frame, or code object'.format(object))
+TypeError: &amp;lt;built-in function func&amp;gt; is not a module, class, method, function, traceback, frame, or code object
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;In such case it is still possible to get file path of &lt;code&gt;.so&lt;/code&gt;:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;&amp;gt;&amp;gt;&amp;gt; inspect.getfile(inspect.getmodule(func))
+'/home/user/.../lib/python3.4/site-packages/something.cpython-34m.so'
+&lt;/code&gt;&lt;/pre&gt;</summary><category term="cpython"></category></entry><entry><title>python -m compatibility</title><link href="http://py.93z.org/notes/python-m-compatibility/" rel="alternate"></link><updated>2011-07-13T00:00:00+00:00</updated><id>http://py.93z.org/notes/python-m-compatibility/</id><summary type="html">&lt;p&gt;As we all know, &lt;code&gt;python -m name&lt;/code&gt; (see &lt;a href="http://docs.python.org/2.7/using/cmdline.html#using-on-interface-options"&gt;interface options&lt;/a&gt;) can run module named &lt;code&gt;name&lt;/code&gt; that is present in &lt;a href="http://docs.python.org/2.7/using/cmdline.html#envvar-PYTHONPATH"&gt;&lt;code&gt;PYTHONPATH&lt;/code&gt;&lt;/a&gt;. Also it can run package, if there is &lt;code&gt;__main__&lt;/code&gt; module inside of that package (actually, it will run that module).&lt;/p&gt;&lt;p&gt;Running module with &lt;code&gt;python -m&lt;/code&gt; in Python ≥ 2.4 is okay. But beware of running &lt;strong&gt;packages&lt;/strong&gt; this way in Python 2.4, 2.5 and 2.6.&lt;/p&gt;</summary><category term="cpython"></category></entry><entry><title>Sort dict’s keys by values</title><link href="http://py.93z.org/notes/sort-dict-keys-by-values/" rel="alternate"></link><updated>2010-08-29T00:00:00+00:00</updated><id>http://py.93z.org/notes/sort-dict-keys-by-values/</id><summary type="html">&lt;p&gt;Can we actually sort a Python’s dict? No, but we can sort a list that contains its keys and values.&lt;/p&gt;&lt;p&gt;A simplest way to do this is to use a &lt;code&gt;sort&lt;/code&gt; method:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;&amp;gt;&amp;gt;&amp;gt; d = {&amp;#x27;c&amp;#x27;: 100, &amp;#x27;a&amp;#x27;: 0, &amp;#x27;b&amp;#x27;: 10}
+&amp;gt;&amp;gt;&amp;gt; items = d.items()
+&amp;gt;&amp;gt;&amp;gt; items.sort(lambda x, y: cmp(x[1], y[1]))
+&amp;gt;&amp;gt;&amp;gt; items
+[(&amp;#x27;a&amp;#x27;, 0), (&amp;#x27;b&amp;#x27;, 10), (&amp;#x27;c&amp;#x27;, 100)]&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;We can use a &lt;code&gt;key&lt;/code&gt; argument to make function call a bit shorter:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;&amp;gt;&amp;gt;&amp;gt; items = d.items()
+&amp;gt;&amp;gt;&amp;gt; items.sort(key=lambda i: i[1])
+&amp;gt;&amp;gt;&amp;gt; items
+[(&amp;#x27;a&amp;#x27;, 0), (&amp;#x27;b&amp;#x27;, 10), (&amp;#x27;c&amp;#x27;, 100)]&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Also we can use a &lt;a href="http://docs.python.org/2.7/library/functions.html#sorted"&gt;&lt;code&gt;sorted&lt;/code&gt;&lt;/a&gt; built-in:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;&amp;gt;&amp;gt;&amp;gt; sorted(d.iteritems(), key=lambda i: i[1])
+[(&amp;#x27;a&amp;#x27;, 0), (&amp;#x27;b&amp;#x27;, 10), (&amp;#x27;c&amp;#x27;, 100)]&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;But what if we care about speed? &lt;a href="http://writeonly.wordpress.com/2008/08/30/sorting-dictionaries-by-value-in-python-improved/"&gt;According to Gregg Lind&lt;/a&gt;, the fastest solution uses &lt;a href="http://docs.python.org/2.7/library/operator.html#operator.itemgetter"&gt;&lt;code&gt;operator.itemgetter&lt;/code&gt;&lt;/a&gt; (that is suggested in &lt;a href="http://www.python.org/dev/peps/pep-0265/"&gt;PEP 265&lt;/a&gt; named “Sorting Dictionaries by Value”) instead of lambda function:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;&amp;gt;&amp;gt;&amp;gt; from operator import itemgetter
+&amp;gt;&amp;gt;&amp;gt; sorted(d.iteritems(), key=itemgetter(1))
+[(&amp;#x27;a&amp;#x27;, 0), (&amp;#x27;b&amp;#x27;, 10), (&amp;#x27;c&amp;#x27;, 100)]&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;This version is 10x faster than first three.&lt;/p&gt;</summary><category term="cpython"></category></entry></feed>

@@ -1,0 +1,27 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>How to determine file where particular function is defined ← Notes ← py.93z.org</title><link rel="stylesheet" href="/s/styles.css"><link rel="alternate" type="application/atom+xml" href="/notes/feed/" title="Recent notes from py.93z.org"></head><body><div class="h"><ol class="h-bc"><li><a href="/" rel="home">py.93z.org</a></li><li class="last"><a href="/notes/">Notes</a></li></ol></div><div class="c"><div class="c-i"><div class="c-p"><h1>How to determine file where particular function is defined</h1><div><p>...at execution time, given that all you have is an instance of function object:</p><pre><code>&gt;&gt;&gt; type(func)
+&lt;class 'function'&gt;
+</code></pre><p>Knowing where it is defined may save you some time during debugging session: say, when you are not sure that function you are dealing with is imported from “correct” location. Despite being easy, such sanity check may help.</p><p>Most obvious option is to use <code>co_filename</code> attribute of function’s code:</p><pre><code>&gt;&gt;&gt; func.__code__.co_filename
+'/home/user/.../something.py'
+</code></pre><p>This also may work with methods:</p><pre><code>&gt;&gt;&gt; class SomeClass:
+...     def some_method(self):
+...         pass
+... 
+&gt;&gt;&gt; obj = SomeClass()
+&gt;&gt;&gt; obj.some_method.__code__.co_filename
+'&lt;stdin&gt;'
+&gt;&gt;&gt; obj.some_method.__func__.__code__.co_filename
+'&lt;stdin&gt;'
+</code></pre><p>Usually it’s better to use <code>inspect.getsourcefile</code> (that uses <code>inspect.getfile</code>, which uses something similar to above, but in more consistent way—for many different types):</p><pre><code>&gt;&gt;&gt; import inspect
+&gt;&gt;&gt; inspect.getsourcefile(func)
+'/home/user/.../something.py'
+</code></pre><p>But if <code>func</code> is defined in CPython extension (that is shared library which uses C API), <code>inspect.getsourcefile</code> will fail with <code>TypeError</code>:</p><pre><code>&gt;&gt;&gt; inspect.getsourcefile(func)
+Traceback (most recent call last):
+  File &quot;&lt;stdin&gt;&quot;, line 1, in &lt;module&gt;
+  File &quot;/home/user/.../lib/python3.4/inspect.py&quot;, line 571, in getsourcefile
+    filename = getfile(object)
+  File &quot;/home/user/.../lib/python3.4/inspect.py&quot;, line 536, in getfile
+    'function, traceback, frame, or code object'.format(object))
+TypeError: &lt;built-in function func&gt; is not a module, class, method, function, traceback, frame, or code object
+</code></pre><p>In such case it is still possible to get file path of <code>.so</code>:</p><pre><code>&gt;&gt;&gt; inspect.getfile(inspect.getmodule(func))
+'/home/user/.../lib/python3.4/site-packages/something.cpython-34m.so'
+</code></pre></div></div><div class="c-s"><div class="c-s-s"><h6>Note metadata</h6><dl class="nm-l"><dt>Publication date</dt><dd>April 5, 2016</dd><dt>Tags</dt><dd><ol class="t-l"><li><a href="/tags/cpython/">CPython</a></li></ol></dd></dl></div><div class="c-s-s"><h6>About</h6><p>This is “all things Python” blog. I hope some notes are helpful.</p></div><div class="c-s-s"><h6>Recent notes</h6><ol class="n-l"><li><a href="/notes/automatic-html-escaping-in-mako/">Automatic HTML escaping in Mako</a></li><li><a href="/notes/how-to-create-.tar.gz-reproducibly/">How to create .tar.gz reproducibly (putting it together)</a></li><li><a href="/notes/how-to-create-.gz-reproducibly/">How to create .gz reproducibly</a></li><li><a href="/notes/how-to-create-.tar-reproducibly/">How to create .tar reproducibly</a></li><li><a href="/notes/reproducible-builds-and-django.utils.feedgenerator/">Reproducible builds and django.utils.feedgenerator</a></li><li class="a-o"><span class="a">How to determine file where particular function is defined</span></li><li><a href="/notes/python-m-compatibility/">python -m compatibility</a></li><li><a href="/notes/sort-dict-keys-by-values/">Sort dict’s keys by values</a></li></ol><p><a href="/notes/">All notes</a></p></div></div></div></div><div class="f"><div class="f-i"><div class="f-a"><p>© 2010–2017 py.93z.org</p></div><div class="f-s"><ol class="f-nw"><li><a href="//dev.93z.org">dev.93z.org</a></li><li class="a-o"><a href="/" rel="home" class="a">py.93z.org</a></li></ol></div></div></div><script src="/s/scripts.js" type="text/javascript"></script></body></html>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?><feed xml:lang="en" xmlns="http://www.w3.org/2005/Atom"><title>Recent notes (Terminal) from dev.93z.org</title><link href="http://dev.93z.org/tags/terminal/" rel="alternate"></link><link href="http://dev.93z.org/tags/terminal/feed/" rel="self"></link><id>http://dev.93z.org/tags/terminal/</id><updated>2016-01-30T00:00:00+00:00</updated><author><name>dev.93z.org</name></author><entry><title>Converting built-in theme of GNOME Terminal for urxvt</title><link href="http://dev.93z.org/notes/converting-built-in-theme-of-gnome-terminal-for-urxvt/" rel="alternate"></link><updated>2016-01-30T00:00:00+00:00</updated><id>http://dev.93z.org/notes/converting-built-in-theme-of-gnome-terminal-for-urxvt/</id><summary type="html">&lt;p&gt;Recently I’ve been working on a tool that generates simple reports with ANSI escape codes (mainly with &lt;a href="https://en.wikipedia.org/wiki/ANSI_escape_code#Colors"&gt;color-related SGR parameters&lt;/a&gt;), and I noticed that current color theme of my terminal emulator is too pale to work comfortably, so I decided it’s a good time to change theme to more contrast one—Tango, one of built-in color themes of GNOME Terminal 3.6.2.&lt;/p&gt;&lt;p&gt;Color values for built-in color theme can be obtained from two paths:&lt;/p&gt;&lt;ol&gt;&lt;li&gt;&lt;code&gt;~/.gconf/apps/gnome-terminal/profiles/Profile0/%gconf.xml&lt;/code&gt; (config)&lt;/li&gt;&lt;li&gt;&lt;code&gt;gnome-terminal-3.6.2/src/terminal-profile.c&lt;/code&gt; (source code)&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;First approach (with &lt;code&gt;%gconf.xml&lt;/code&gt;) involves taking contents of &lt;code&gt;stringvalue&lt;/code&gt; element (which is child of &lt;code&gt;entry&lt;/code&gt; element with &lt;code&gt;name=&amp;quot;palette&amp;quot;&lt;/code&gt; attribute), splitting it by colon, converting values like &lt;code&gt;#EEEEEEEEECEC&lt;/code&gt; to ones urxvt understands. This requires one to have GNOME Terminal installed somewhere to select color theme and get config file. As I don’t have that terminal emulator installed (because I don’t use it), I chose second approach (taking values from source code).&lt;/p&gt;&lt;p&gt;First I downloaded, verified (against SHA-256 checksum) and extracted &lt;code&gt;gnome-terminal-3.6.2.tar.xz&lt;/code&gt;: that resulted in &lt;code&gt;gnome-terminal-3.6.2/&lt;/code&gt; directory. Quick search revealed that there is &lt;code&gt;terminal_palettes&lt;/code&gt; array of arrays of &lt;code&gt;GdkColor&lt;/code&gt; on line 202 of &lt;code&gt;gnome-terminal-3.6.2/src/terminal-profile.c&lt;/code&gt;. Here’s Tango palette:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;{ 0, 0x0000, 0x0000, 0x0000 },
+{ 0, 0xcccc, 0x0000, 0x0000 },
+{ 0, 0x4e4e, 0x9a9a, 0x0606 },
+{ 0, 0xc4c4, 0xa0a0, 0x0000 },
+{ 0, 0x3434, 0x6565, 0xa4a4 },
+{ 0, 0x7575, 0x5050, 0x7b7b },
+{ 0, 0x0606, 0x9820, 0x9a9a },
+{ 0, 0xd3d3, 0xd7d7, 0xcfcf },
+{ 0, 0x5555, 0x5757, 0x5353 },
+{ 0, 0xefef, 0x2929, 0x2929 },
+{ 0, 0x8a8a, 0xe2e2, 0x3434 },
+{ 0, 0xfcfc, 0xe9e9, 0x4f4f },
+{ 0, 0x7272, 0x9f9f, 0xcfcf },
+{ 0, 0xadad, 0x7f7f, 0xa8a8 },
+{ 0, 0x3434, 0xe2e2, 0xe2e2 },
+{ 0, 0xeeee, 0xeeee, 0xecec }&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;For purposes of GNOME Terminal these “triples” are converted to &lt;code&gt;#rrrrggggbbbb&lt;/code&gt; via following (&lt;code&gt;pango-1.39.0/pango/pango-color.c&lt;/code&gt;):&lt;/p&gt;&lt;pre&gt;&lt;code&gt;g_strdup_printf (&amp;quot;#%04x%04x%04x&amp;quot;, color-&amp;gt;red, color-&amp;gt;green, color-&amp;gt;blue);&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;According to urxvt manual (&lt;code&gt;man urxvt&lt;/code&gt;), it allows user to specify colors as &lt;code&gt;rgba:rrrr/gggg/bbbb/aaaa&lt;/code&gt; (this is what lines like &lt;code&gt;{ 0, 0x0000, 0x0000, 0x0000 }&lt;/code&gt; must be converted into):&lt;/p&gt;&lt;blockquote&gt;For complete control, rxvt-unicode also supports &amp;quot;rgba:rrrr/gggg/bbbb/aaaa&amp;quot; (exactly four hex digits/component) colour specifications, where the additional &amp;quot;aaaa&amp;quot; component specifies opacity (alpha) values. The minimum value of 0000 is completely transparent, while &amp;quot;ffff&amp;quot; is completely opaque).&lt;/blockquote&gt;&lt;p&gt;So I wrote simple Python 3 script:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;PALETTE_SOURCE = &amp;quot;&amp;quot;&amp;quot;
+{ 0, 0x0000, 0x0000, 0x0000 },
+{ 0, 0xcccc, 0x0000, 0x0000 },
+{ 0, 0x4e4e, 0x9a9a, 0x0606 },
+{ 0, 0xc4c4, 0xa0a0, 0x0000 },
+{ 0, 0x3434, 0x6565, 0xa4a4 },
+{ 0, 0x7575, 0x5050, 0x7b7b },
+{ 0, 0x0606, 0x9820, 0x9a9a },
+{ 0, 0xd3d3, 0xd7d7, 0xcfcf },
+{ 0, 0x5555, 0x5757, 0x5353 },
+{ 0, 0xefef, 0x2929, 0x2929 },
+{ 0, 0x8a8a, 0xe2e2, 0x3434 },
+{ 0, 0xfcfc, 0xe9e9, 0x4f4f },
+{ 0, 0x7272, 0x9f9f, 0xcfcf },
+{ 0, 0xadad, 0x7f7f, 0xa8a8 },
+{ 0, 0x3434, 0xe2e2, 0xe2e2 },
+{ 0, 0xeeee, 0xeeee, 0xecec }
+&amp;quot;&amp;quot;&amp;quot;.strip()
+OUTPUT_TEMPLATE = &amp;quot;urxvt*color{:d}: rgba:{:04x}/{:04x}/{:04x}/ffff&amp;quot;
+
+
+for n, palette_line in enumerate(PALETTE_SOURCE.split(&amp;quot;,\n&amp;quot;)):
+    line = palette_line.replace(&amp;quot;{ 0, &amp;quot;, &amp;quot;&amp;quot;).replace(&amp;quot; }&amp;quot;, &amp;quot;&amp;quot;)
+    triple = [int(s, base=16) for s in line.split(&amp;quot;, &amp;quot;)]
+    print(OUTPUT_TEMPLATE.format(n, *triple))&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Here’s the output (can be pasted into &lt;code&gt;.Xdefaults&lt;/code&gt;):&lt;/p&gt;&lt;pre&gt;&lt;code&gt;urxvt*color0: rgba:0000/0000/0000/ffff
+urxvt*color1: rgba:cccc/0000/0000/ffff
+urxvt*color2: rgba:4e4e/9a9a/0606/ffff
+urxvt*color3: rgba:c4c4/a0a0/0000/ffff
+urxvt*color4: rgba:3434/6565/a4a4/ffff
+urxvt*color5: rgba:7575/5050/7b7b/ffff
+urxvt*color6: rgba:0606/9820/9a9a/ffff
+urxvt*color7: rgba:d3d3/d7d7/cfcf/ffff
+urxvt*color8: rgba:5555/5757/5353/ffff
+urxvt*color9: rgba:efef/2929/2929/ffff
+urxvt*color10: rgba:8a8a/e2e2/3434/ffff
+urxvt*color11: rgba:fcfc/e9e9/4f4f/ffff
+urxvt*color12: rgba:7272/9f9f/cfcf/ffff
+urxvt*color13: rgba:adad/7f7f/a8a8/ffff
+urxvt*color14: rgba:3434/e2e2/e2e2/ffff
+urxvt*color15: rgba:eeee/eeee/ecec/ffff&lt;/code&gt;&lt;/pre&gt;</summary><category term="terminal"></category></entry></feed>

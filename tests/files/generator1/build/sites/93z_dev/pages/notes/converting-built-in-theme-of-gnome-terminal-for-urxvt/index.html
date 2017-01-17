@@ -1,0 +1,55 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Converting built-in theme of GNOME Terminal for urxvt ← Notes ← dev.93z.org</title><link rel="stylesheet" href="/s/styles.css"><link rel="alternate" type="application/atom+xml" href="/notes/feed/" title="Recent notes from dev.93z.org"></head><body><div class="h"><ol class="h-bc"><li><a href="/" rel="home">dev.93z.org</a></li><li class="last"><a href="/notes/">Notes</a></li></ol></div><div class="c"><div class="c-i"><div class="c-p"><h1>Converting built-in theme of GNOME Terminal for urxvt</h1><div><p>Recently I’ve been working on a tool that generates simple reports with ANSI escape codes (mainly with <a href="https://en.wikipedia.org/wiki/ANSI_escape_code#Colors">color-related SGR parameters</a>), and I noticed that current color theme of my terminal emulator is too pale to work comfortably, so I decided it’s a good time to change theme to more contrast one—Tango, one of built-in color themes of GNOME Terminal 3.6.2.</p><p>Color values for built-in color theme can be obtained from two paths:</p><ol><li><code>~/.gconf/apps/gnome-terminal/profiles/Profile0/%gconf.xml</code> (config)</li><li><code>gnome-terminal-3.6.2/src/terminal-profile.c</code> (source code)</li></ol><p>First approach (with <code>%gconf.xml</code>) involves taking contents of <code>stringvalue</code> element (which is child of <code>entry</code> element with <code>name=&quot;palette&quot;</code> attribute), splitting it by colon, converting values like <code>#EEEEEEEEECEC</code> to ones urxvt understands. This requires one to have GNOME Terminal installed somewhere to select color theme and get config file. As I don’t have that terminal emulator installed (because I don’t use it), I chose second approach (taking values from source code).</p><p>First I downloaded, verified (against SHA-256 checksum) and extracted <code>gnome-terminal-3.6.2.tar.xz</code>: that resulted in <code>gnome-terminal-3.6.2/</code> directory. Quick search revealed that there is <code>terminal_palettes</code> array of arrays of <code>GdkColor</code> on line 202 of <code>gnome-terminal-3.6.2/src/terminal-profile.c</code>. Here’s Tango palette:</p><pre><code>{ 0, 0x0000, 0x0000, 0x0000 },
+{ 0, 0xcccc, 0x0000, 0x0000 },
+{ 0, 0x4e4e, 0x9a9a, 0x0606 },
+{ 0, 0xc4c4, 0xa0a0, 0x0000 },
+{ 0, 0x3434, 0x6565, 0xa4a4 },
+{ 0, 0x7575, 0x5050, 0x7b7b },
+{ 0, 0x0606, 0x9820, 0x9a9a },
+{ 0, 0xd3d3, 0xd7d7, 0xcfcf },
+{ 0, 0x5555, 0x5757, 0x5353 },
+{ 0, 0xefef, 0x2929, 0x2929 },
+{ 0, 0x8a8a, 0xe2e2, 0x3434 },
+{ 0, 0xfcfc, 0xe9e9, 0x4f4f },
+{ 0, 0x7272, 0x9f9f, 0xcfcf },
+{ 0, 0xadad, 0x7f7f, 0xa8a8 },
+{ 0, 0x3434, 0xe2e2, 0xe2e2 },
+{ 0, 0xeeee, 0xeeee, 0xecec }</code></pre><p>For purposes of GNOME Terminal these “triples” are converted to <code>#rrrrggggbbbb</code> via following (<code>pango-1.39.0/pango/pango-color.c</code>):</p><pre><code>g_strdup_printf (&#34;#%04x%04x%04x&#34;, color-&gt;red, color-&gt;green, color-&gt;blue);</code></pre><p>According to urxvt manual (<code>man urxvt</code>), it allows user to specify colors as <code>rgba:rrrr/gggg/bbbb/aaaa</code> (this is what lines like <code>{ 0, 0x0000, 0x0000, 0x0000 }</code> must be converted into):</p><blockquote>For complete control, rxvt-unicode also supports &quot;rgba:rrrr/gggg/bbbb/aaaa&quot; (exactly four hex digits/component) colour specifications, where the additional &quot;aaaa&quot; component specifies opacity (alpha) values. The minimum value of 0000 is completely transparent, while &quot;ffff&quot; is completely opaque).</blockquote><p>So I wrote simple Python 3 script:</p><pre><code>PALETTE_SOURCE = &#34;&#34;&#34;
+{ 0, 0x0000, 0x0000, 0x0000 },
+{ 0, 0xcccc, 0x0000, 0x0000 },
+{ 0, 0x4e4e, 0x9a9a, 0x0606 },
+{ 0, 0xc4c4, 0xa0a0, 0x0000 },
+{ 0, 0x3434, 0x6565, 0xa4a4 },
+{ 0, 0x7575, 0x5050, 0x7b7b },
+{ 0, 0x0606, 0x9820, 0x9a9a },
+{ 0, 0xd3d3, 0xd7d7, 0xcfcf },
+{ 0, 0x5555, 0x5757, 0x5353 },
+{ 0, 0xefef, 0x2929, 0x2929 },
+{ 0, 0x8a8a, 0xe2e2, 0x3434 },
+{ 0, 0xfcfc, 0xe9e9, 0x4f4f },
+{ 0, 0x7272, 0x9f9f, 0xcfcf },
+{ 0, 0xadad, 0x7f7f, 0xa8a8 },
+{ 0, 0x3434, 0xe2e2, 0xe2e2 },
+{ 0, 0xeeee, 0xeeee, 0xecec }
+&#34;&#34;&#34;.strip()
+OUTPUT_TEMPLATE = &#34;urxvt*color{:d}: rgba:{:04x}/{:04x}/{:04x}/ffff&#34;
+
+
+for n, palette_line in enumerate(PALETTE_SOURCE.split(&#34;,\n&#34;)):
+    line = palette_line.replace(&#34;{ 0, &#34;, &#34;&#34;).replace(&#34; }&#34;, &#34;&#34;)
+    triple = [int(s, base=16) for s in line.split(&#34;, &#34;)]
+    print(OUTPUT_TEMPLATE.format(n, *triple))</code></pre><p>Here’s the output (can be pasted into <code>.Xdefaults</code>):</p><pre><code>urxvt*color0: rgba:0000/0000/0000/ffff
+urxvt*color1: rgba:cccc/0000/0000/ffff
+urxvt*color2: rgba:4e4e/9a9a/0606/ffff
+urxvt*color3: rgba:c4c4/a0a0/0000/ffff
+urxvt*color4: rgba:3434/6565/a4a4/ffff
+urxvt*color5: rgba:7575/5050/7b7b/ffff
+urxvt*color6: rgba:0606/9820/9a9a/ffff
+urxvt*color7: rgba:d3d3/d7d7/cfcf/ffff
+urxvt*color8: rgba:5555/5757/5353/ffff
+urxvt*color9: rgba:efef/2929/2929/ffff
+urxvt*color10: rgba:8a8a/e2e2/3434/ffff
+urxvt*color11: rgba:fcfc/e9e9/4f4f/ffff
+urxvt*color12: rgba:7272/9f9f/cfcf/ffff
+urxvt*color13: rgba:adad/7f7f/a8a8/ffff
+urxvt*color14: rgba:3434/e2e2/e2e2/ffff
+urxvt*color15: rgba:eeee/eeee/ecec/ffff</code></pre></div></div><div class="c-s"><div class="c-s-s"><h6>Note metadata</h6><dl class="nm-l"><dt>Publication date</dt><dd>January 30, 2016</dd><dt>Tags</dt><dd><ol class="t-l"><li><a href="/tags/terminal/">Terminal</a></li></ol></dd></dl></div><div class="c-s-s"><h6>About</h6><p>This blog is about things I encounter while doing web and non-web development (and that are not about Python—these are in separate blog).</p></div><div class="c-s-s"><h6>Recent notes</h6><ol class="n-l"><li><a href="/notes/missing-growl.js-tutorial/">Missing growl.js tutorial</a></li><li class="a-o"><span class="a">Converting built-in theme of GNOME Terminal for urxvt</span></li><li><a href="/notes/how-to-fix-ssl-certificate-for-firefox/">How to fix SSL certificate for Firefox</a></li></ol><p><a href="/notes/">All notes</a></p></div></div></div></div><div class="f"><div class="f-i"><div class="f-a"><p>© 2012–2017 dev.93z.org</p></div><div class="f-s"><ol class="f-nw"><li class="a-o"><a href="/" rel="home" class="a">dev.93z.org</a></li><li><a href="//py.93z.org">py.93z.org</a></li></ol></div></div></div><script src="/s/scripts.js" type="text/javascript"></script></body></html>

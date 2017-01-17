@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?><feed xml:lang="en" xmlns="http://www.w3.org/2005/Atom"><title>Recent notes (Pyramid) from py.93z.org</title><link href="http://py.93z.org/tags/pyramid/" rel="alternate"></link><link href="http://py.93z.org/tags/pyramid/feed/" rel="self"></link><id>http://py.93z.org/tags/pyramid/</id><updated>2017-01-02T00:00:00+00:00</updated><author><name>py.93z.org</name></author><entry><title>Automatic HTML escaping in Mako</title><link href="http://py.93z.org/notes/automatic-html-escaping-in-mako/" rel="alternate"></link><updated>2017-01-02T00:00:00+00:00</updated><id>http://py.93z.org/notes/automatic-html-escaping-in-mako/</id><summary type="html">&lt;p&gt;Some developers I know think that &lt;a href="http://makotemplates.org/"&gt;Mako&lt;/a&gt; templating library is “less secure” than, for example, Jinja2 (and, therefore, “must not be used”). Actually, Mako is as “secure” as you’ll configure it.&lt;/p&gt;&lt;p&gt;Though by default Mako does not HTML-escape rendered expressions, it can be configured to do that. When you create lookup (an instance of &lt;code&gt;mako.lookup.TemplateLookup&lt;/code&gt;), you may pass arguments: list of directories to search for templates, encoding of templates, etc. Usually it looks like this:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;import mako.lookup
+
+
+lookup = mako.lookup.TemplateLookup(
+    directories=[os.path.join(..., &amp;quot;templates&amp;quot;)],
+    input_encoding=&amp;quot;utf-8&amp;quot;,
+    filesystem_checks=False,
+    strict_undefined=True)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;So, how to make lookup, as constructed above, escape rendered expressions? In addition to aforementioned arguments, &lt;code&gt;TemplateLookup&lt;/code&gt; accepts &lt;code&gt;default_filters&lt;/code&gt;—a list of filters to use on expressions by default:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;import mako.lookup
+
+
+lookup = mako.lookup.TemplateLookup(
+    directories=[os.path.join(..., &amp;quot;templates&amp;quot;)],
+    input_encoding=&amp;quot;utf-8&amp;quot;,
+    filesystem_checks=False,
+    strict_undefined=True,
+    default_filters=[&amp;quot;h&amp;quot;])
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;For example, &lt;code&gt;pyramid_mako&lt;/code&gt; uses &lt;code&gt;default_filters=[&amp;quot;h&amp;quot;]&lt;/code&gt; by default, so if you’re user of Pyramid framework you may have one less thing to worry about.&lt;/p&gt;&lt;p&gt;Why not &lt;code&gt;default_filters=[&amp;quot;str&amp;quot;, &amp;quot;h&amp;quot;]&lt;/code&gt;? It may seem to work, but not for objects with &lt;code&gt;__html__&lt;/code&gt; method: these will be treated as text that needs escaping, not HTML that should be rendered as-is. Default filters are applied from left to right, so &lt;code&gt;${form.somefield()}&lt;/code&gt; will be transformed, roughly speaking, into &lt;code&gt;h(str(form.somefield()))&lt;/code&gt;—which is, basically, &lt;code&gt;h(form.somefield().__str__())&lt;/code&gt;. As you can clearly see, &lt;code&gt;form.somefield().__html__&lt;/code&gt; will not be called if &lt;code&gt;default_filters&lt;/code&gt; are defined as &lt;code&gt;[&amp;quot;str&amp;quot;, &amp;quot;h&amp;quot;]&lt;/code&gt;.&lt;/p&gt;</summary><category term="mako"></category><category term="pyramid"></category></entry></feed>

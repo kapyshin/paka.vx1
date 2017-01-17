@@ -1,0 +1,82 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>How to create .tar reproducibly ← Notes ← py.93z.org</title><link rel="stylesheet" href="/s/styles.css"><link rel="alternate" type="application/atom+xml" href="/notes/feed/" title="Recent notes from py.93z.org"></head><body><div class="h"><ol class="h-bc"><li><a href="/" rel="home">py.93z.org</a></li><li class="last"><a href="/notes/">Notes</a></li></ol></div><div class="c"><div class="c-i"><div class="c-p"><h1>How to create .tar reproducibly</h1><div><p>Given that in <a href="https://docs.python.org/3.5/library/tarfile.html"><code>tarfile</code></a> default for <code>format</code> argument of <code>tarfile.TarFile</code> is <a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/tarfile.py#l106"><code>GNU_FORMAT</code></a>, I will use GNU <code>tar</code>, not <a href="http://pubs.opengroup.org/onlinepubs/9699919799/utilities/pax.html">POSIX</a>, but in aspects I care about for this note they are very similar.</p><p>Tar archive is comprised of sequence of “file entries”. Each entry consists of header (metadata) and contents (data). Header contains <code>mtime</code> field, that represents file modification time at the time of archivation. In Python’s <code>tarfile</code> archive entries are represented by instances of <a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/tarfile.py#l720"><code>tarfile.TarInfo</code></a>, and <code>mtime</code> field of file entry header is represented by public field of <code>tarfile.TarInfo</code> instance. This is all specifics you need to know about tar archive format, but if you want non-simplified description, consult, for example, the <a href="https://www.gnu.org/software/tar/manual/html_node/Standard.html">relevant section</a> of GNU <code>tar</code> manual.</p><p>So, when you are making a tar archive, there are 2 ways in which you can influence end result:</p><ul><li>add files in particular order;</li><li>set added files’ modification time (<code>mtime</code>).</li></ul><p>If (for your goals) you consider two identical files with differing <code>mtime</code> different, you don’t have to worry about it (but still you may want to add files in order). Otherwise, you’ll have to set it to some fixed value to make it irrelevant.</p><p>I am talking about realistic scenario, so it should be possible to add not just regular files, but also directories (recursively). Given that in such case we still care about file order, I will not use <a href="https://docs.python.org/3.5/library/tarfile.html#tarfile.TarFile.add"><code>TarFile.add</code></a>: it <a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/tarfile.py#l1950">uses</a> the <a href="https://docs.python.org/3.5/library/os.html#os.listdir"><code>os.listdir</code></a>, that returns a list of dir entries in arbitrary order—and <code>TarFile.add</code> does not sort it nor allow us to do that:</p><pre><code>for f in os.listdir(name):
+    self.add(...)
+</code></pre><p>Instead for for recursing into dirs I’ll use <a href="https://docs.python.org/3.5/library/os.html#os.walk"><code>os.walk</code></a>. Though it uses <a href="https://docs.python.org/3.5/library/os.html#os.scandir"><code>os.scandir</code></a> internally (<code>os.listdir</code> in CPython &lt; 3.5), which does not guarantee any ordering too, it is <a href="https://docs.python.org/3.5/library/os.html#os.walk">possible</a> to affect <code>walk</code> so it does its work in particular order:</p><blockquote><p>When <code>topdown</code> is <code>True</code>, the caller can modify the <code>dirnames</code> list in-place (perhaps using <code>del</code> or slice assignment), and <code>walk()</code> will only recurse into the subdirectories whose names remain in <code>dirnames</code>; this can be used to prune the search, <strong>impose a specific order of visiting</strong>, or even to inform <code>walk()</code> about directories the caller creates or renames before it resumes <code>walk()</code> again. Modifying <code>dirnames</code> when <code>topdown</code> is <code>False</code> has no effect on the behavior of the walk, because in bottom-up mode the directories in <code>dirnames</code> are generated before <code>dirpath</code> itself is generated.</p></blockquote><p>Thus, code that always traverses all dirs and files in <code>top_dir</code> is same order will look like this:</p><pre><code>for dirpath, dirnames, filenames in os.walk(top_dir, topdown=True):
+    dirnames.sort()
+    # ...
+    for filename in sorted(filenames):
+        # ...
+</code></pre><p>To add file entries (that is, regular files, dirs, etc.) into archive I’ll use <a href="https://docs.python.org/3.5/library/tarfile.html#tarfile.TarFile.addfile"><code>TarFile.addfile</code></a> instead of <code>TarFile.add</code>. Therefore, in general, <code>tarfile</code>-related code will look like this:</p><pre><code>with tarfile.open(name=&quot;out.tar&quot;, mode=&quot;w&quot;) as archive:
+    for path, arcname in ...:
+        tinfo = archive.gettarinfo(path, arcname=arcname)
+        tinfo.mtime = 123123.1
+        if tinfo.isreg():
+            with open(path, &quot;rb&quot;) as file:
+                archive.addfile(tinfo, fileobj=file)
+        else:
+            archive.addfile(tinfo)
+</code></pre><p>Before getting to actual implementation, let’s discuss one more concept: arcnames. Arcname is name of file in archive, and it can, actually, be path: that is, it can be <code>control.txt</code> as well as <code>somedir/1.txt</code> or <code>/home/user/some/file</code>. For our purposes, having absolute file paths in archive is undesirable, so we have to “modify” them in a way that ensures arcnames do not include parents of “top dirs” we intend to add into archive.</p><h2>Implementation</h2><p>The goal is to build a script (<code>mktar.py</code>) that creates tar archive containing files and directories: paths are passed as command-line arguments.</p><pre><code>#!/usr/bin/env python3
+
+import os
+import tarfile
+import argparse
+
+
+def tar(top_paths, *, mtime, dest, reltop, verbose):
+    relpath = lambda p: os.path.relpath(p, start=reltop)
+    def _get_to_add():
+        for top_path in sorted(top_paths):
+            if os.path.isdir(top_path):
+                for dirpath, dirnames, filenames in os.walk(
+                        top_path, topdown=True):
+                    dirnames.sort()
+                    yield (dirpath, relpath(dirpath))
+                    for filename in sorted(filenames):
+                        filepath = os.path.join(dirpath, filename)
+                        yield (filepath, relpath(filepath))
+            else:
+                yield (top_path, relpath(top_path))
+    with tarfile.open(name=dest, mode=&quot;w&quot;) as archive:
+        for path, arcname in _get_to_add():
+            if verbose:
+                print(path, &quot;-&gt;&quot;, arcname)
+            tinfo = archive.gettarinfo(path, arcname=arcname)
+            if mtime is not None:
+                tinfo.mtime = mtime
+            if tinfo.isreg():
+                with open(path, &quot;rb&quot;) as file:
+                    archive.addfile(tinfo, fileobj=file)
+            else:
+                archive.addfile(tinfo)
+
+
+if __name__ == &quot;__main__&quot;:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(&quot;paths&quot;, nargs=&quot;+&quot;)
+    parser.add_argument(&quot;--reltop&quot;, default=os.getcwd())
+    parser.add_argument(&quot;--mtime&quot;, type=float, default=None)
+    parser.add_argument(&quot;--verbose&quot;, action=&quot;store_true&quot;, default=False)
+    parser.add_argument(&quot;dest&quot;)
+    args = parser.parse_args()
+    tar(
+        args.paths, mtime=args.mtime, dest=args.dest, reltop=args.reltop,
+        verbose=args.verbose)
+</code></pre><p>So, for example, to create archive <code>out.tar</code> with <code>mtime</code> pre-set to <code>123</code>, you’d use <code>./mktar.py dir1/ file1 dir2/ file2 out.tar --mtime 123</code>. If, say, <code>dir{1,2}</code> and <code>file{1,2}</code> are in <code>reproducible_tar/</code>, and you want it to be “root” inside an archive, you could use <code>--reltop ../</code> to modify “relative top dir” (<code>reltop</code>), so arcnames will be built like this (command is <code>./mktar.py dir1/ file1 dir2/ file2 out.tar --mtime 123 --reltop ../ --verbose</code> and is run from inside <code>reproducible_tar/</code>):</p><pre><code>dir1/ -&gt; reproducible_tar/dir1
+dir1/1 -&gt; reproducible_tar/dir1/1
+dir1/1/a -&gt; reproducible_tar/dir1/1/a
+dir1/1/b -&gt; reproducible_tar/dir1/1/b
+dir1/1/c -&gt; reproducible_tar/dir1/1/c
+dir1/1/d -&gt; reproducible_tar/dir1/1/d
+dir1/2 -&gt; reproducible_tar/dir1/2
+dir1/2/aa -&gt; reproducible_tar/dir1/2/aa
+dir1/2/bb -&gt; reproducible_tar/dir1/2/bb
+dir1/2/cc -&gt; reproducible_tar/dir1/2/cc
+dir1/2/dd -&gt; reproducible_tar/dir1/2/dd
+dir1/3 -&gt; reproducible_tar/dir1/3
+dir1/3/aaa -&gt; reproducible_tar/dir1/3/aaa
+dir1/3/bbb -&gt; reproducible_tar/dir1/3/bbb
+dir1/3/ccc -&gt; reproducible_tar/dir1/3/ccc
+dir1/3/ddd -&gt; reproducible_tar/dir1/3/ddd
+dir2/ -&gt; reproducible_tar/dir2
+file1 -&gt; reproducible_tar/file1
+file2 -&gt; reproducible_tar/file2
+</code></pre><p>Now we have working implementation of reproducible tar building, and we can <a href="/notes/how-to-create-.gz-reproducibly/">look at gzip</a>.</p></div></div><div class="c-s"><div class="c-s-s"><h6>Note metadata</h6><dl class="nm-l"><dt>Publication date</dt><dd>November 10, 2016</dd><dt>Tags</dt><dd><ol class="t-l"><li><a href="/tags/cpython/">CPython</a></li></ol></dd></dl></div><div class="c-s-s"><h6>Making .tar.gz reproducibly</h6><ol class="n-l"><li><a href="/notes/how-to-create-.tar.gz-reproducibly/">How to create .tar.gz reproducibly (putting it together)</a></li><li><a href="/notes/how-to-create-.gz-reproducibly/">How to create .gz reproducibly</a></li><li class="a-o"><span class="a">How to create .tar reproducibly</span></li></ol></div><div class="c-s-s"><h6>About</h6><p>This is “all things Python” blog. I hope some notes are helpful.</p></div><div class="c-s-s"><h6>Recent notes</h6><ol class="n-l"><li><a href="/notes/automatic-html-escaping-in-mako/">Automatic HTML escaping in Mako</a></li><li><a href="/notes/how-to-create-.tar.gz-reproducibly/">How to create .tar.gz reproducibly (putting it together)</a></li><li><a href="/notes/how-to-create-.gz-reproducibly/">How to create .gz reproducibly</a></li><li class="a-o"><span class="a">How to create .tar reproducibly</span></li><li><a href="/notes/reproducible-builds-and-django.utils.feedgenerator/">Reproducible builds and django.utils.feedgenerator</a></li><li><a href="/notes/how-to-determine-file-where-particular-function-is-defined/">How to determine file where particular function is defined</a></li><li><a href="/notes/python-m-compatibility/">python -m compatibility</a></li><li><a href="/notes/sort-dict-keys-by-values/">Sort dict’s keys by values</a></li></ol><p><a href="/notes/">All notes</a></p></div></div></div></div><div class="f"><div class="f-i"><div class="f-a"><p>© 2010–2017 py.93z.org</p></div><div class="f-s"><ol class="f-nw"><li><a href="//dev.93z.org">dev.93z.org</a></li><li class="a-o"><a href="/" rel="home" class="a">py.93z.org</a></li></ol></div></div></div><script src="/s/scripts.js" type="text/javascript"></script></body></html>

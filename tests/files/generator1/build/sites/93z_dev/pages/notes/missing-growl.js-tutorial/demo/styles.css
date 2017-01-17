@@ -1,0 +1,59 @@
+body {
+    font: 95%/145% sans-serif;
+}
+
+.panel {
+    padding: 1em;
+    width: 20em;
+    margin-top: .8em;
+    border-radius: .4em;
+}
+
+.panel label {
+    display: block;
+    margin-bottom: .2em;
+}
+
+.panel label:after {
+    content: ":";
+}
+
+.panel .message-input {
+    padding: .4em;
+    min-width: 16em;
+}
+
+.panel .trigger {
+    padding: .4em .8em;
+}
+
+.error {
+    background: #901e1e;
+    color: #fff;
+}
+
+.success {
+    background: #1e9044;
+    color: #fff;
+}
+
+#growl {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 16em;
+    overflow-x: hidden;
+}
+
+.message {
+    padding: 1.2em .6em;
+    position: relative;
+}
+
+.message-close-trigger {
+    cursor: default;
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 120%;
+}

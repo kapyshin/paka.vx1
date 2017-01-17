@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?><feed xml:lang="en" xmlns="http://www.w3.org/2005/Atom"><title>Recent notes from dev.93z.org</title><link href="http://dev.93z.org/notes/" rel="alternate"></link><link href="http://dev.93z.org/notes/feed/" rel="self"></link><id>http://dev.93z.org/notes/</id><updated>2016-03-18T00:00:00+00:00</updated><author><name>dev.93z.org</name></author><subtitle>This blog is about things I encounter while doing web and non-web development (and that are not about Python—these are in separate blog).</subtitle><entry><title>Missing growl.js tutorial</title><link href="http://dev.93z.org/notes/missing-growl.js-tutorial/" rel="alternate"></link><updated>2016-03-18T00:00:00+00:00</updated><id>http://dev.93z.org/notes/missing-growl.js-tutorial/</id><summary type="html">&lt;p&gt;In 2010 I created &lt;a href="https://github.com/originalcoding/growl.js"&gt;small JavaScript library&lt;/a&gt; for in-browser “notifications”. Though its API was documented, no tutorial was written. Actually, this is not surprising, as growl.js is unpopular even at Original Coding: it was used in several projects, and then focus shifted to projects where work is 90% backend. But I wouldn’t be writing this just to say that, right? I prepared short introduction to library, just in case you need to understand how to use it. But it’s still better to use something modern, e.g. some &lt;a href="http://facebook.github.io/react/"&gt;React&lt;/a&gt; component.&lt;/p&gt;&lt;p&gt;First of all, there is a &lt;a href="demo/"&gt;complete demo&lt;/a&gt;—check it out. Basically, it contains two “panels” (green and red): each has text input and button. You type some text into input, press button, and new notification is added. Each notification type has its own settings that define its behaviour. Two types of notifications are defined in demo: &lt;code&gt;success&lt;/code&gt; and &lt;code&gt;error&lt;/code&gt;. “Success” notifications are shown for 5 seconds, and then disappear. “Error” ones stay on page until you “close” them. Now let’s look at the code.&lt;/p&gt;&lt;p&gt;At the bottom of &lt;a href="demo/main.js"&gt;&lt;code&gt;main.js&lt;/code&gt;&lt;/a&gt; there is following:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;var growl = new Growl({
+    element: growlEl,
+    types: {
+        error: {sticky: true},
+        success: {sticky: false, timeout: 5000}
+    },
+    bind: true,
+    add: addGrowlMessage,
+    remove: removeGrowlMessage
+});
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;As you can see, new instance of &lt;code&gt;Growl&lt;/code&gt; class is created and some options (growl.js calls them “settings”) are passed:&lt;/p&gt;&lt;dl&gt;&lt;dt&gt;&lt;code&gt;element&lt;/code&gt;&lt;/dt&gt;&lt;dd&gt;This is container for all notifications. It can be &lt;code&gt;HTMLElement&lt;/code&gt; (like in demo), jQuery-wrapped &lt;code&gt;HTMLElement&lt;/code&gt;, or anything else.&lt;/dd&gt;&lt;dt&gt;&lt;code&gt;types&lt;/code&gt;&lt;/dt&gt;&lt;dd&gt;Each notification has type (e.g. &lt;code&gt;success&lt;/code&gt;), and this is where you define both types and their settings. &lt;code&gt;sticky&lt;/code&gt; notifications are not removed automatically. Non-&lt;code&gt;sticky&lt;/code&gt; notifications are removed after &lt;code&gt;timeout&lt;/code&gt; (in milliseconds) is passed (removal is done by call to &lt;code&gt;remove&lt;/code&gt; function which is described below).&lt;/dd&gt;&lt;dt&gt;&lt;code&gt;add&lt;/code&gt;&lt;/dt&gt;&lt;dd&gt;This is a function that accepts &lt;code&gt;element&lt;/code&gt;, notification message (which in demo is taken from text input’s &lt;code&gt;value&lt;/code&gt;), and settings (so you can get type of notification via &lt;code&gt;settings.type&lt;/code&gt;); it returns notification element (anything you want, as &lt;em&gt;you&lt;/em&gt; handle it in &lt;code&gt;remove&lt;/code&gt;) that will be passed to &lt;code&gt;remove&lt;/code&gt;. It does what you make it to do: in demo I create new &lt;code&gt;div&lt;/code&gt;, add classes, set its &lt;code&gt;innerHTML&lt;/code&gt;, and add to &lt;code&gt;element&lt;/code&gt;. For &lt;code&gt;sticky&lt;/code&gt; notifications I also create &lt;code&gt;span&lt;/code&gt; with &lt;code&gt;click&lt;/code&gt; handler that removes notification element from &lt;code&gt;element&lt;/code&gt;.&lt;/dd&gt;&lt;dt&gt;&lt;code&gt;remove&lt;/code&gt;&lt;/dt&gt;&lt;dd&gt;This is a function that accepts &lt;code&gt;element&lt;/code&gt;, notification element (whatever you returned from &lt;code&gt;add&lt;/code&gt;), and settings; it doesn’t return anything. It does what you make it to do: in demo I remove notification element from &lt;code&gt;element&lt;/code&gt; (and if after that &lt;code&gt;element&lt;/code&gt; contains no notification elements, the former is hidden).&lt;/dd&gt;&lt;dt&gt;&lt;code&gt;bind&lt;/code&gt;&lt;/dt&gt;&lt;dd&gt;&lt;p&gt;If &lt;code&gt;bind&lt;/code&gt; is &lt;code&gt;true&lt;/code&gt;, growl.js adds shortcuts for &lt;code&gt;addNotification&lt;/code&gt; method, so notifications could be added via &lt;code&gt;growl[type of notification]("Hello!", extra settings)&lt;/code&gt;.&lt;/p&gt;&lt;p&gt;Look at code from demo:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;growl.success("Page is loaded.", {timeout: 1000});&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;This is equivalent to following:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;growl.addNotification("Page is loaded.", {type: "success", timeout: 1000});&lt;/code&gt;&lt;/pre&gt;&lt;/dd&gt;&lt;/dl&gt;&lt;p&gt;After &lt;code&gt;Growl&lt;/code&gt; instance is created, you can use it to add notifications with shortcuts (e.g. &lt;code&gt;growl.error(&amp;quot;Put the cookie down!&amp;quot;)&lt;/code&gt;) or with &lt;code&gt;addNotification&lt;/code&gt; (like I do in &lt;code&gt;setUpPanel&lt;/code&gt; function in &lt;code&gt;main.js&lt;/code&gt;):&lt;/p&gt;&lt;pre&gt;&lt;code&gt;var val = messageInputEl.value.trim();
+if (val) {
+    growl.addNotification(val, {type: type});  // type is string, like &amp;quot;error&amp;quot; or &amp;quot;success&amp;quot;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;And that’s it. For “how it may look” look at the &lt;a href="demo/"&gt;demo&lt;/a&gt;, for “how it’s done” see &lt;a href="demo/main.js"&gt;&lt;code&gt;main.js&lt;/code&gt;&lt;/a&gt;.&lt;/p&gt;</summary><category term="browsers"></category><category term="javascript"></category></entry><entry><title>Converting built-in theme of GNOME Terminal for urxvt</title><link href="http://dev.93z.org/notes/converting-built-in-theme-of-gnome-terminal-for-urxvt/" rel="alternate"></link><updated>2016-01-30T00:00:00+00:00</updated><id>http://dev.93z.org/notes/converting-built-in-theme-of-gnome-terminal-for-urxvt/</id><summary type="html">&lt;p&gt;Recently I’ve been working on a tool that generates simple reports with ANSI escape codes (mainly with &lt;a href="https://en.wikipedia.org/wiki/ANSI_escape_code#Colors"&gt;color-related SGR parameters&lt;/a&gt;), and I noticed that current color theme of my terminal emulator is too pale to work comfortably, so I decided it’s a good time to change theme to more contrast one—Tango, one of built-in color themes of GNOME Terminal 3.6.2.&lt;/p&gt;&lt;p&gt;Color values for built-in color theme can be obtained from two paths:&lt;/p&gt;&lt;ol&gt;&lt;li&gt;&lt;code&gt;~/.gconf/apps/gnome-terminal/profiles/Profile0/%gconf.xml&lt;/code&gt; (config)&lt;/li&gt;&lt;li&gt;&lt;code&gt;gnome-terminal-3.6.2/src/terminal-profile.c&lt;/code&gt; (source code)&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;First approach (with &lt;code&gt;%gconf.xml&lt;/code&gt;) involves taking contents of &lt;code&gt;stringvalue&lt;/code&gt; element (which is child of &lt;code&gt;entry&lt;/code&gt; element with &lt;code&gt;name=&amp;quot;palette&amp;quot;&lt;/code&gt; attribute), splitting it by colon, converting values like &lt;code&gt;#EEEEEEEEECEC&lt;/code&gt; to ones urxvt understands. This requires one to have GNOME Terminal installed somewhere to select color theme and get config file. As I don’t have that terminal emulator installed (because I don’t use it), I chose second approach (taking values from source code).&lt;/p&gt;&lt;p&gt;First I downloaded, verified (against SHA-256 checksum) and extracted &lt;code&gt;gnome-terminal-3.6.2.tar.xz&lt;/code&gt;: that resulted in &lt;code&gt;gnome-terminal-3.6.2/&lt;/code&gt; directory. Quick search revealed that there is &lt;code&gt;terminal_palettes&lt;/code&gt; array of arrays of &lt;code&gt;GdkColor&lt;/code&gt; on line 202 of &lt;code&gt;gnome-terminal-3.6.2/src/terminal-profile.c&lt;/code&gt;. Here’s Tango palette:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;{ 0, 0x0000, 0x0000, 0x0000 },
+{ 0, 0xcccc, 0x0000, 0x0000 },
+{ 0, 0x4e4e, 0x9a9a, 0x0606 },
+{ 0, 0xc4c4, 0xa0a0, 0x0000 },
+{ 0, 0x3434, 0x6565, 0xa4a4 },
+{ 0, 0x7575, 0x5050, 0x7b7b },
+{ 0, 0x0606, 0x9820, 0x9a9a },
+{ 0, 0xd3d3, 0xd7d7, 0xcfcf },
+{ 0, 0x5555, 0x5757, 0x5353 },
+{ 0, 0xefef, 0x2929, 0x2929 },
+{ 0, 0x8a8a, 0xe2e2, 0x3434 },
+{ 0, 0xfcfc, 0xe9e9, 0x4f4f },
+{ 0, 0x7272, 0x9f9f, 0xcfcf },
+{ 0, 0xadad, 0x7f7f, 0xa8a8 },
+{ 0, 0x3434, 0xe2e2, 0xe2e2 },
+{ 0, 0xeeee, 0xeeee, 0xecec }&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;For purposes of GNOME Terminal these “triples” are converted to &lt;code&gt;#rrrrggggbbbb&lt;/code&gt; via following (&lt;code&gt;pango-1.39.0/pango/pango-color.c&lt;/code&gt;):&lt;/p&gt;&lt;pre&gt;&lt;code&gt;g_strdup_printf (&amp;quot;#%04x%04x%04x&amp;quot;, color-&amp;gt;red, color-&amp;gt;green, color-&amp;gt;blue);&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;According to urxvt manual (&lt;code&gt;man urxvt&lt;/code&gt;), it allows user to specify colors as &lt;code&gt;rgba:rrrr/gggg/bbbb/aaaa&lt;/code&gt; (this is what lines like &lt;code&gt;{ 0, 0x0000, 0x0000, 0x0000 }&lt;/code&gt; must be converted into):&lt;/p&gt;&lt;blockquote&gt;For complete control, rxvt-unicode also supports &amp;quot;rgba:rrrr/gggg/bbbb/aaaa&amp;quot; (exactly four hex digits/component) colour specifications, where the additional &amp;quot;aaaa&amp;quot; component specifies opacity (alpha) values. The minimum value of 0000 is completely transparent, while &amp;quot;ffff&amp;quot; is completely opaque).&lt;/blockquote&gt;&lt;p&gt;So I wrote simple Python 3 script:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;PALETTE_SOURCE = &amp;quot;&amp;quot;&amp;quot;
+{ 0, 0x0000, 0x0000, 0x0000 },
+{ 0, 0xcccc, 0x0000, 0x0000 },
+{ 0, 0x4e4e, 0x9a9a, 0x0606 },
+{ 0, 0xc4c4, 0xa0a0, 0x0000 },
+{ 0, 0x3434, 0x6565, 0xa4a4 },
+{ 0, 0x7575, 0x5050, 0x7b7b },
+{ 0, 0x0606, 0x9820, 0x9a9a },
+{ 0, 0xd3d3, 0xd7d7, 0xcfcf },
+{ 0, 0x5555, 0x5757, 0x5353 },
+{ 0, 0xefef, 0x2929, 0x2929 },
+{ 0, 0x8a8a, 0xe2e2, 0x3434 },
+{ 0, 0xfcfc, 0xe9e9, 0x4f4f },
+{ 0, 0x7272, 0x9f9f, 0xcfcf },
+{ 0, 0xadad, 0x7f7f, 0xa8a8 },
+{ 0, 0x3434, 0xe2e2, 0xe2e2 },
+{ 0, 0xeeee, 0xeeee, 0xecec }
+&amp;quot;&amp;quot;&amp;quot;.strip()
+OUTPUT_TEMPLATE = &amp;quot;urxvt*color{:d}: rgba:{:04x}/{:04x}/{:04x}/ffff&amp;quot;
+
+
+for n, palette_line in enumerate(PALETTE_SOURCE.split(&amp;quot;,\n&amp;quot;)):
+    line = palette_line.replace(&amp;quot;{ 0, &amp;quot;, &amp;quot;&amp;quot;).replace(&amp;quot; }&amp;quot;, &amp;quot;&amp;quot;)
+    triple = [int(s, base=16) for s in line.split(&amp;quot;, &amp;quot;)]
+    print(OUTPUT_TEMPLATE.format(n, *triple))&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Here’s the output (can be pasted into &lt;code&gt;.Xdefaults&lt;/code&gt;):&lt;/p&gt;&lt;pre&gt;&lt;code&gt;urxvt*color0: rgba:0000/0000/0000/ffff
+urxvt*color1: rgba:cccc/0000/0000/ffff
+urxvt*color2: rgba:4e4e/9a9a/0606/ffff
+urxvt*color3: rgba:c4c4/a0a0/0000/ffff
+urxvt*color4: rgba:3434/6565/a4a4/ffff
+urxvt*color5: rgba:7575/5050/7b7b/ffff
+urxvt*color6: rgba:0606/9820/9a9a/ffff
+urxvt*color7: rgba:d3d3/d7d7/cfcf/ffff
+urxvt*color8: rgba:5555/5757/5353/ffff
+urxvt*color9: rgba:efef/2929/2929/ffff
+urxvt*color10: rgba:8a8a/e2e2/3434/ffff
+urxvt*color11: rgba:fcfc/e9e9/4f4f/ffff
+urxvt*color12: rgba:7272/9f9f/cfcf/ffff
+urxvt*color13: rgba:adad/7f7f/a8a8/ffff
+urxvt*color14: rgba:3434/e2e2/e2e2/ffff
+urxvt*color15: rgba:eeee/eeee/ecec/ffff&lt;/code&gt;&lt;/pre&gt;</summary><category term="terminal"></category></entry><entry><title>How to fix SSL certificate for Firefox</title><link href="http://dev.93z.org/notes/how-to-fix-ssl-certificate-for-firefox/" rel="alternate"></link><updated>2012-06-14T00:00:00+00:00</updated><id>http://dev.93z.org/notes/how-to-fix-ssl-certificate-for-firefox/</id><summary type="html">&lt;p&gt;Firefox requires intermediate SSL certificates while some other browsers don’t. I use nginx, and all companies I work with use it too. Its &lt;a href="http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_certificate"&gt;documentation&lt;/a&gt; states:&lt;/p&gt;&lt;blockquote&gt;If intermediate certificates should be specified in addition to a primary certificate, they should be specified in the same file in the following order: the primary certificate comes first, then the intermediate certificates.&lt;/blockquote&gt;&lt;p&gt;This means that your certificate should look like this:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;-----BEGIN CERTIFICATE-----
+your certificate
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+intermediate certificate
+-----END CERTIFICATE-----&lt;/code&gt;&lt;/pre&gt;</summary><category term="browsers"></category><category term="nginx"></category></entry></feed>
