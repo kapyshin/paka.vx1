@@ -72,7 +72,7 @@ def _get_servers(specs):
             mk(
                 "error_page",
                 "{} {}".format(code, errorpages.make_url_path(code)))
-            for code in errorpages.CODES)
+            for code in sorted(errorpages.CODES))
 
 
 def _get_lines(directive):

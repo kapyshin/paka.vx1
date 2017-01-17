@@ -27,7 +27,7 @@ if (val) {
 { 0, 0x7272, 0x9f9f, 0xcfcf },
 { 0, 0xadad, 0x7f7f, 0xa8a8 },
 { 0, 0x3434, 0xe2e2, 0xe2e2 },
-{ 0, 0xeeee, 0xeeee, 0xecec }&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;For purposes of GNOME Terminal these “triples” are converted to &lt;code&gt;#rrrrggggbbbb&lt;/code&gt; via following (&lt;code&gt;pango-1.39.0/pango/pango-color.c&lt;/code&gt;):&lt;/p&gt;&lt;pre&gt;&lt;code&gt;g_strdup_printf (&amp;quot;#%04x%04x%04x&amp;quot;, color-&amp;gt;red, color-&amp;gt;green, color-&amp;gt;blue);&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;According to urxvt manual (&lt;code&gt;man urxvt&lt;/code&gt;), it allows user to specify colors as &lt;code&gt;rgba:rrrr/gggg/bbbb/aaaa&lt;/code&gt; (this is what lines like &lt;code&gt;{ 0, 0x0000, 0x0000, 0x0000 }&lt;/code&gt; must be converted into):&lt;/p&gt;&lt;blockquote&gt;For complete control, rxvt-unicode also supports &amp;quot;rgba:rrrr/gggg/bbbb/aaaa&amp;quot; (exactly four hex digits/component) colour specifications, where the additional &amp;quot;aaaa&amp;quot; component specifies opacity (alpha) values. The minimum value of 0000 is completely transparent, while &amp;quot;ffff&amp;quot; is completely opaque).&lt;/blockquote&gt;&lt;p&gt;So I wrote simple Python 3 script:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;PALETTE_SOURCE = &amp;quot;&amp;quot;&amp;quot;
+{ 0, 0xeeee, 0xeeee, 0xecec }&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;For purposes of GNOME Terminal these “triples” are converted to &lt;code&gt;#rrrrggggbbbb&lt;/code&gt; via following (&lt;code&gt;pango-1.39.0/pango/pango-color.c&lt;/code&gt;):&lt;/p&gt;&lt;pre&gt;&lt;code&gt;g_strdup_printf (&amp;#34;#%04x%04x%04x&amp;#34;, color-&amp;gt;red, color-&amp;gt;green, color-&amp;gt;blue);&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;According to urxvt manual (&lt;code&gt;man urxvt&lt;/code&gt;), it allows user to specify colors as &lt;code&gt;rgba:rrrr/gggg/bbbb/aaaa&lt;/code&gt; (this is what lines like &lt;code&gt;{ 0, 0x0000, 0x0000, 0x0000 }&lt;/code&gt; must be converted into):&lt;/p&gt;&lt;blockquote&gt;For complete control, rxvt-unicode also supports &amp;quot;rgba:rrrr/gggg/bbbb/aaaa&amp;quot; (exactly four hex digits/component) colour specifications, where the additional &amp;quot;aaaa&amp;quot; component specifies opacity (alpha) values. The minimum value of 0000 is completely transparent, while &amp;quot;ffff&amp;quot; is completely opaque).&lt;/blockquote&gt;&lt;p&gt;So I wrote simple Python 3 script:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;PALETTE_SOURCE = &amp;#34;&amp;#34;&amp;#34;
 { 0, 0x0000, 0x0000, 0x0000 },
 { 0, 0xcccc, 0x0000, 0x0000 },
 { 0, 0x4e4e, 0x9a9a, 0x0606 },
@@ -44,13 +44,13 @@ if (val) {
 { 0, 0xadad, 0x7f7f, 0xa8a8 },
 { 0, 0x3434, 0xe2e2, 0xe2e2 },
 { 0, 0xeeee, 0xeeee, 0xecec }
-&amp;quot;&amp;quot;&amp;quot;.strip()
-OUTPUT_TEMPLATE = &amp;quot;urxvt*color{:d}: rgba:{:04x}/{:04x}/{:04x}/ffff&amp;quot;
+&amp;#34;&amp;#34;&amp;#34;.strip()
+OUTPUT_TEMPLATE = &amp;#34;urxvt*color{:d}: rgba:{:04x}/{:04x}/{:04x}/ffff&amp;#34;
 
 
-for n, palette_line in enumerate(PALETTE_SOURCE.split(&amp;quot;,\n&amp;quot;)):
-    line = palette_line.replace(&amp;quot;{ 0, &amp;quot;, &amp;quot;&amp;quot;).replace(&amp;quot; }&amp;quot;, &amp;quot;&amp;quot;)
-    triple = [int(s, base=16) for s in line.split(&amp;quot;, &amp;quot;)]
+for n, palette_line in enumerate(PALETTE_SOURCE.split(&amp;#34;,\n&amp;#34;)):
+    line = palette_line.replace(&amp;#34;{ 0, &amp;#34;, &amp;#34;&amp;#34;).replace(&amp;#34; }&amp;#34;, &amp;#34;&amp;#34;)
+    triple = [int(s, base=16) for s in line.split(&amp;#34;, &amp;#34;)]
     print(OUTPUT_TEMPLATE.format(n, *triple))&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Here’s the output (can be pasted into &lt;code&gt;.Xdefaults&lt;/code&gt;):&lt;/p&gt;&lt;pre&gt;&lt;code&gt;urxvt*color0: rgba:0000/0000/0000/ffff
 urxvt*color1: rgba:cccc/0000/0000/ffff
 urxvt*color2: rgba:4e4e/9a9a/0606/ffff
