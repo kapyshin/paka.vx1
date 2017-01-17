@@ -1,0 +1,10 @@
+<%inherit file="base.html"/>
+<%namespace file="site_helpers.mako" name="helpers"/>
+
+${helpers.render_heading(breadcrumbs)}
+
+% if tag.description:
+  <div>${tag.description}</div>
+% endif
+
+${helpers.render_notes_list(notes)}

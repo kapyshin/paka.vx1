@@ -1,0 +1,29 @@
+breadcrumbs_home_text  {site.attrs[name]}
+breadcrumbs_all_tags_text  Tags
+breadcrumbs_one_tag_text  {tag.attrs[name]}
+breadcrumbs_all_notes_text  Notes
+breadcrumbs_one_note_text  {note.attrs[title]}
+breadcrumbs_about_text  About
+breadcrumbs_error_page_500_text  Server error
+breadcrumbs_error_page_400_text  Error
+breadcrumbs_error_page_413_text  Request is too large
+breadcrumbs_error_page_403_text  Access denied
+breadcrumbs_error_page_404_text  Page not found
+note_metadata_pubdate  Publication date
+note_metadata_tags  Tags
+secondary_section_about_heading  About
+secondary_about  {site.attrs[description]}
+secondary_section_note_metadata_heading  Note metadata
+secondary_section_note_series_heading  {series.attrs[name]}
+secondary_section_recent_notes_heading  Recent notes
+secondary_section_popular_tags_heading  Most common tags
+primary_section_recent_notes_heading  Recent notes
+recent_notes_feed_author_name  {site.attrs[name]}
+recent_notes_feed_title  Recent notes from {site.attrs[name]}
+recent_notes_feed_subtitle  {site.attrs[description]}
+recent_notes_feed_item_title  {note.attrs[title]}
+recent_tag_notes_feed_author_name  {site.attrs[name]}
+recent_tag_notes_feed_title  Recent notes ({tag.attrs[name]}) from {site.attrs[name]}
+recent_tag_notes_feed_item_title  {note.attrs[title]}
+recent_notes_all_link_text  All notes
+popular_tags_all_link_text  All tags

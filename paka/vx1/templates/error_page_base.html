@@ -1,0 +1,16 @@
+<%namespace file="site_helpers.mako" name="helpers"/>
+<!doctype html>
+<html>
+  <head>
+    ${helpers.render_meta()}
+    <title>${helpers.render_title(breadcrumbs)}</title>
+    ${helpers.render_styles()}
+  </head>
+  <body>
+    <div class="oh-no">
+      ${helpers.render_heading(breadcrumbs)}
+      ${helpers.render_chunk("error_page_{}_content".format(code))}
+    </div>
+    ${helpers.render_scripts()}
+  </body>
+</html>

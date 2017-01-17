@@ -1,0 +1,5 @@
+name  py.93z.org
+domain  py.93z.org
+date_format  {0:%B} {0.day}, {0:%Y}
+language  en
+description  This is “all things Python” blog. I hope some notes are helpful.

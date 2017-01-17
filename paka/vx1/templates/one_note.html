@@ -1,0 +1,20 @@
+<%inherit file="base.html"/>
+<%namespace file="site_helpers.mako" name="helpers"/>
+
+${helpers.render_heading(breadcrumbs)}
+
+<div>${note.body}</div>
+
+<%block name="secondary_in_start">
+  <div class="c-s-s">
+    <h6>${helpers.render_translation("secondary_section_note_metadata_heading", {})}</h6>
+    ${helpers.render_note_metadata(note=note, tags=tags)}
+  </div>
+  % for s in series:
+    <div class="c-s-s">
+      <h6>${helpers.render_translation("secondary_section_note_series_heading", {"series": s})}</h6>
+      <% notes = series_to_notes[s.slug] %>
+      ${helpers.render_notes_list(notes)}
+    </div>
+  % endfor
+</%block>

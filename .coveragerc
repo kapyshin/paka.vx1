@@ -1,0 +1,6 @@
+[run]
+branch = True
+source = paka/
+omit =
+    paka/__init__.py
+    paka/vx1/__main__.py

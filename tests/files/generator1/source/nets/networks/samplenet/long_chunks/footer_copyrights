@@ -1,0 +1,2 @@
+<%namespace file="site_helpers.mako" name="helpers"/>
+<p>© ${helpers.render_footer_years(site, separator=u"–")} ${helpers.render_site_name(site)}</p>

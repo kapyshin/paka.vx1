@@ -1,0 +1,36 @@
+<%def name="_render_breadcrumb(crumb, is_last)">
+  <%
+      text = crumb["text"]
+      crumb_url_path = crumb["url_path"]
+  %>
+  <li${"" if not is_last else ' class="last"'}>
+    % if url_path == crumb_url_path:
+      <span>${text}</span>
+    % else:
+      <%
+          if crumb_url_path == "/":
+              attrs = ' rel="home"'
+          else:
+              attrs = ""
+      %>
+      <a href="${crumb_url_path | h,trim}"${attrs}>${text}</a>
+    % endif
+  </li>
+</%def>
+<%def name="render_almost_breadcrumbs(breadcrumbs, class_)">
+  <ol class="${class_}">
+    % if len(breadcrumbs) > 1:
+      % for crumb in breadcrumbs:
+        % if loop.reverse_index > 0:
+          ${_render_breadcrumb(crumb, is_last=loop.reverse_index == 1)}
+        % endif
+      % endfor
+    % else:
+      ${_render_breadcrumb(breadcrumbs[0], is_last=True)}
+    % endif
+  </ol>
+</%def>
+
+<div class="h">
+  ${render_almost_breadcrumbs(breadcrumbs, class_="h-bc")}
+</div>

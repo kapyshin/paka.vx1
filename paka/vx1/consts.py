@@ -1,0 +1,5 @@
+CHARSET = "utf-8"
+
+
+RECENT_NOTES_TEMPLATE_CONTEXT_KEY = "recent_notes"
+POPULAR_TAGS_TEMPLATE_CONTEXT_KEY = "popular_tags"
