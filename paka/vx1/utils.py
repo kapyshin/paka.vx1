@@ -1,5 +1,7 @@
 import os
 
+import markupsafe
+
 
 CHARSET = "utf-8"
 
@@ -40,13 +42,21 @@ def subpaths_rec(base_dir):
 
 
 def read_kv(path):
+    sep = " " * 2
+    def _parse_pair(line):
+        key_spec, value = line.split(sep, 1)
+        key_bits = key_spec.split(":", 1)
+        if len(key_bits) == 1:
+            return (key_spec, value)
+        key, type_ = key_bits
+        assert type_ == "html"  # for now, only HTML for explicit type
+        return (key, markupsafe.Markup(value))
     def _read(path):
-        sep = " " * 2
         lines = read_file(path).strip().splitlines()
         for line in lines:
             line = line.strip()
             if line:
-                yield line.split(sep, 1)
+                yield _parse_pair(line)
     return dict(_read(path))
 
 

@@ -2,4 +2,4 @@ name  dev.93z.org
 domain  dev.93z.org
 date_format  {0:%B} {0.day}, {0:%Y}
 language  en
-description  This blog is about things I encounter while doing web and non-web development (and that are not about Python—these are in separate blog).
+description:html  This blog is about things I encounter while doing web and non-web development (and that are not about Python—these are in <a href="http://py.93z.org">separate blog</a>).
