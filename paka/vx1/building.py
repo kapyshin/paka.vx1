@@ -140,7 +140,7 @@ def _make_note_pairs_for_feed(notes, routes_map):
 def _generate_pages_specs(
         site, pages_build_dir, required_chunk_names, feature_checker,
         error_callback):
-    routes_map = routing.make_routes_map(error_callback=error_callback)
+    routes_map = routing.Map(error_callback=error_callback)
     routing.add_routes(routes_map, feature_checker=feature_checker)
     routes_map.check_routes()
     mk = _make_page_spec_factory(
