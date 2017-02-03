@@ -114,7 +114,7 @@ def get_tags(note, site):
             yield tag
 
 
-tag_sorting_key = lambda tag: tag.attrs["name"]
+tag_sorting_key = lambda tag: casefold(tag.attrs["name"])
 
 
 def sort_tags(tags):

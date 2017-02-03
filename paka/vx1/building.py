@@ -122,7 +122,7 @@ def _make_page_spec_factory(
 def _make_extra_template_context(site):
     recent_notes = utils.sort_notes(site.notes)[:10]
     popular_tags_sorting_key = lambda tag: (
-        -len(tag.notes_slugs), utils.casefold(utils.tag_sorting_key(tag)))
+        -len(tag.notes_slugs), utils.tag_sorting_key(tag))
     popular_tags = sorted(
         site.tags.values(), key=popular_tags_sorting_key)[:10]
     return {
