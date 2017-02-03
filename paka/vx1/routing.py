@@ -66,16 +66,22 @@ class Map(object):
         return route.url_path_tmpl.format(**(context or {}))
 
     def get_lineage(self, route):
-        if route.parent_view_name is NONE_AT_ALL:
+        parent_view_name = route.parent_view_name
+
+        # Lineage concept is not applicable.
+        if parent_view_name is NONE_AT_ALL:
             return []
+
+        # Route has no parent.
+        if not parent_view_name:
+            return [route]
+
+        # There is at least one parent.
         collected = []
-        current_route = route
-        while current_route:
-            collected.append(current_route)
-            parent_view_name = current_route.parent_view_name
-            if not parent_view_name:
-                break
-            current_route = self.find_route_by_view_name(parent_view_name)
+        while parent_view_name:
+            collected.append(route)
+            parent_view_name = route.parent_view_name
+            route = self.find_route_by_view_name(parent_view_name)
         return reversed(collected)
 
 
