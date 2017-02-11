@@ -82,6 +82,9 @@ def main(argv=sys.argv[1:]):
     parser.add_argument(
         "--features", nargs="*", default=[],
         help="names of build features to turn on")
+    parser.add_argument(
+        "--site-attr-overrides", nargs="*",
+        help="site_slug=path_to_attrs_file_with_pairs_to_update")
     args = parser.parse_args(argv)
 
     if args.current_date:
@@ -115,8 +118,8 @@ def main(argv=sys.argv[1:]):
         internal_templates_dir=INTERNAL_TEMPLATES_DIR,
         prepended_templates_dirs=template_dirs_prepended,
         appended_templates_dirs=template_dirs_appended,
-        current_date=current_date,
-        error_callback=error_callback)
+        current_date=current_date, error_callback=error_callback,
+        attr_overrides=args.site_attr_overrides or ())
     # Determine which sites to build.
     slug_to_site = {site.slug: site for site in sites}
     sites = [

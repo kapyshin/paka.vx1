@@ -76,10 +76,14 @@ class TestCase(unittest.TestCase):
         build_dir = os.path.join(dest, "build")
         cache_dir = os.path.join(dest, "cache")
 
+        overrides_argv = [
+            "--site-attr-overrides",
+            "93z_py={}".format(os.path.join(src, "93z_py_attr_overrides"))]
+
         main(argv=[
             "--blognets-dir", nets_dir,
             "--slug-pattern", "*",
             "--template-dirs-prepend", common_dir,
             "--build-dir", build_dir,
             "--cache-dir", cache_dir,
-            "--current-date", "2017-01-17"])
+            "--current-date", "2017-01-17"] + overrides_argv)

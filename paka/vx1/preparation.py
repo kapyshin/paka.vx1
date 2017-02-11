@@ -37,7 +37,8 @@ Series = collections.namedtuple(
 def prepare_sites(
         sites_dirs, networks_dir, internal_templates_dir,
         prepended_templates_dirs, appended_templates_dirs,
-        current_date, error_callback):
+        current_date, error_callback, attr_overrides):
+    attr_overrides = _parse_attr_overrides(attr_overrides)
     networks = _get_networks(networks_dir, error_callback=error_callback)
     # Make {site_slug: network.network_dir} mapping to make template
     # search path (to make renderer).
@@ -64,8 +65,17 @@ def prepare_sites(
         sites.append(
                 _get_site(
                     site, current_date=current_date, renderer=renderer,
-                    error_callback=error_callback))
+                    error_callback=error_callback,
+                    attr_override=attr_overrides.get(site.slug, {})))
     return _set_up_networks(networks=networks, sites=sites)
+
+
+def _parse_attr_overrides(raw_overrides):
+    attr_overrides = {}
+    for s in raw_overrides:
+        slug, file_path = s.split("=", 1)
+        attr_overrides[slug] = utils.read_kv(file_path)
+    return attr_overrides
 
 
 def _get_networks(networks_dir, error_callback):
@@ -98,7 +108,7 @@ def _make_site(site_dir):
         translations_data={})
 
 
-def _get_site(site, current_date, renderer, error_callback):
+def _get_site(site, current_date, renderer, error_callback, attr_override):
     site = site._replace(renderer=renderer)
     # Read translations.
     site.translations_data.update(
@@ -109,6 +119,7 @@ def _get_site(site, current_date, renderer, error_callback):
         site.attrs, ("domain", "name", "date_format", "language"),
         entity_slug=site.slug,
         error_callback=error_callback)
+    site.attrs.update(attr_override)
     # Read tags.
     tags_dir = os.path.join(site.site_dir, "tags")
     for tag_dir in utils.subpaths(tags_dir):
