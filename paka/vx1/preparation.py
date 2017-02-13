@@ -53,12 +53,10 @@ def prepare_sites(
             os.path.join(_site_slug_to_network_dir[site.slug], "templates"),
             os.path.join(site.site_dir, "templates"),
             internal_templates_dir]
-        templatepath = templates.make_templatepath(
-            prepended=prepended_templates_dirs,
+        renderer = templates.make_renderer(
+            charset=consts.CHARSET, prepended=prepended_templates_dirs,
             internal=internal_templates_dirs,
             appended=appended_templates_dirs)
-        renderer = templates.make_renderer(
-            templatepath, charset=consts.CHARSET)
         # This needs explanation. We did _make_site(site_dir) to create object
         # with slug and site_dir fields, which we used to make template search
         # path. Now all other fields need to be filled (notes, tags, etc.)
