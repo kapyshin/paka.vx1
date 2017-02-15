@@ -92,10 +92,10 @@
 
 <%def name="render_heading(breadcrumbs)">
   <% crumb = breadcrumbs[-1] %>
-  <h1>${crumb["heading"]}</h1>
+  <h1>${crumb.heading | h}</h1>
 </%def>
 <%def name="render_title(breadcrumbs, separator=u' ← ')" filter="trim">
-  ${separator.join(crumb["text"] for crumb in reversed(breadcrumbs))}</%def>
+  ${separator.join(crumb.label for crumb in reversed(breadcrumbs)) | h}</%def>
 
 <%def name="render_network_list(site, class_)">
   <ol class="${class_}">

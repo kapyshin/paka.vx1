@@ -1,14 +1,14 @@
-breadcrumbs_home_text  {site.attrs[name]}
-breadcrumbs_all_tags_text  Tags
-breadcrumbs_one_tag_text  {tag.attrs[name]}
-breadcrumbs_all_notes_text  Notes
-breadcrumbs_one_note_text  {note.attrs[title]}
-breadcrumbs_about_text  About
-breadcrumbs_error_page_500_text  Server error
-breadcrumbs_error_page_400_text  Error
-breadcrumbs_error_page_413_text  Request is too large
-breadcrumbs_error_page_403_text  Access denied
-breadcrumbs_error_page_404_text  Page not found
+breadcrumbs_home_label  {site.attrs[name]}
+breadcrumbs_all_tags_label  Tags
+breadcrumbs_one_tag_label  {tag.attrs[name]}
+breadcrumbs_all_notes_label  Notes
+breadcrumbs_one_note_label  {note.attrs[title]}
+breadcrumbs_about_label  About
+breadcrumbs_error_page_500_label  Server error
+breadcrumbs_error_page_400_label  Error
+breadcrumbs_error_page_413_label  Request is too large
+breadcrumbs_error_page_403_label  Access denied
+breadcrumbs_error_page_404_label  Page not found
 note_metadata_pubdate  Publication date
 note_metadata_tags  Tags
 secondary_section_about_heading  About

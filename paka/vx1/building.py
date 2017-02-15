@@ -2,6 +2,8 @@ import os
 import shutil
 import collections
 
+from paka import breadcrumbs
+
 from . import translations
 from . import errorpages
 from . import routing
@@ -54,26 +56,27 @@ def _sorted_series(tags):
     return sorted(tags, key=lambda tag: tag.attrs["name"])
 
 
-def _make_breadcrumbs(route, context, site):
+def _make_breadcrumbs(current_route, context, site):
     routes_map = context["routes_map"]
-    breadcrumbs = []
-    for ro in routes_map.get_lineage(route):
-        view_name = ro.view_name
+    lineage = routes_map.get_lineage(current_route)
+    if not lineage:
+        return
+    def _make_crumb(route):
+        view_name = route.view_name
         mk_key = lambda suff: "breadcrumbs_{}_{}".format(view_name, suff)
-        text = translations.translate(
-            mk_key("text"), context=context, site=site)
+        label = translations.translate(
+            mk_key("label"), context=context, site=site)
         try:
             heading = translations.translate(
                 mk_key("heading"), context=context, site=site)
         except KeyError:
-            heading = text
-        breadcrumbs.append({
-            "view_name": view_name,
-            "url_path": routes_map.format_url_path(
-                ro.view_name, context=context),
-            "text": text,
-            "heading": heading})
-    return breadcrumbs
+            heading = None
+        return breadcrumbs.Crumb(
+            label=label, heading=heading,
+            url_path=routes_map.format_url_path(
+                route.view_name, context=context),
+            extra={"view_name": view_name})
+    return breadcrumbs.Bread.from_crumbs(map(_make_crumb, lineage))
 
 
 def _make_page_spec_factory(
@@ -107,7 +110,8 @@ def _make_page_spec_factory(
             # This statement is separate from above, because we want to avoid
             # having chunks and breadcrumbs present in context for them.
             context.update(
-                breadcrumbs=_make_breadcrumbs(route, context=context, site=site),
+                breadcrumbs=_make_breadcrumbs(
+                    route, context=context, site=site),
                 chunks=_make_chunks(
                     site, context=context,
                     required_chunk_names=required_chunk_names,

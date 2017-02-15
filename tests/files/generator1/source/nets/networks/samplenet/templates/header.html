@@ -1,11 +1,11 @@
 <%def name="_render_breadcrumb(crumb, is_last)">
   <%
-      text = crumb["text"]
-      crumb_url_path = crumb["url_path"]
+      label = crumb.label
+      crumb_url_path = crumb.url_path
   %>
   <li${"" if not is_last else ' class="last"'}>
     % if url_path == crumb_url_path:
-      <span>${text}</span>
+      <span>${label | h}</span>
     % else:
       <%
           if crumb_url_path == "/":
@@ -13,7 +13,7 @@
           else:
               attrs = ""
       %>
-      <a href="${crumb_url_path | h,trim}"${attrs}>${text}</a>
+      <a href="${crumb_url_path | h,trim}"${attrs}>${label | h}</a>
     % endif
   </li>
 </%def>

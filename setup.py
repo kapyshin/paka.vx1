@@ -8,7 +8,7 @@ PY2 = sys.version_info.major == 2
 def _get_install_requirements():
     requirements = [
         "six", "mako", "markupsafe", "paka.cmark",
-        "paka.feedgenerator", "paka.webstatic"]
+        "paka.feedgenerator", "paka.webstatic", "paka.breadcrumbs"]
     if PY2:
         requirements.append("enum34")
     return requirements
@@ -20,7 +20,7 @@ def _get_testing_requirements():
 
 setuptools.setup(
     name="paka.vx1",
-    version="2.7.0",
+    version="2.8.0",
     packages=setuptools.find_packages(),
     install_requires=_get_install_requirements(),
     extras_require={"testing": _get_testing_requirements()},
