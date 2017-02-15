@@ -5,7 +5,7 @@
   %>
   <li${"" if not is_last else ' class="last"'}>
     % if url_path == crumb_url_path:
-      <span>${label | h}</span>
+      <span>${label}</span>
     % else:
       <%
           if crumb_url_path == "/":
@@ -13,7 +13,7 @@
           else:
               attrs = ""
       %>
-      <a href="${crumb_url_path | h,trim}"${attrs}>${label | h}</a>
+      <a href="${crumb_url_path | h,trim}"${attrs}>${label}</a>
     % endif
   </li>
 </%def>
