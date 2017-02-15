@@ -25,7 +25,7 @@ def make_notes_feed(template_context):
         return translations.translate(
             "_".join((translations_prefix, suffix)),
             context=dict(default_context, **extra_context),
-            site=site)
+            site=site, escape=False)
     try:
         subtitle = _mktr("subtitle")
     except KeyError:
