@@ -13,6 +13,7 @@ def _get_install_requirements():
         requirements.append("enum34")
     return requirements
 
+
 def _get_testing_requirements():
     return ["repoze.lru"] if PY2 else []
 
