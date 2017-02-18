@@ -83,7 +83,7 @@ def main(argv=sys.argv[1:]):
         "--features", nargs="*", default=[],
         help="names of build features to turn on")
     parser.add_argument(
-        "--site-attr-overrides", nargs="*",
+        "--site-attr-overrides", action="append",
         help="site_slug=path_to_attrs_file_with_pairs_to_update")
     args = parser.parse_args(argv)
 
