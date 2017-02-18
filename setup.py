@@ -20,7 +20,7 @@ def _get_testing_requirements():
 
 setuptools.setup(
     name="paka.vx1",
-    version="2.8.3",
+    version="2.8.4",
     packages=setuptools.find_packages(),
     install_requires=_get_install_requirements(),
     extras_require={"testing": _get_testing_requirements()},

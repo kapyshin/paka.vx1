@@ -113,11 +113,11 @@ def _get_site(site, current_date, renderer, error_callback, attr_override):
         utils.read_translations(site.site_dir))
     # Read attrs.
     site = site._replace(attrs=utils.read_attrs(site.site_dir))
+    site.attrs.update(attr_override)
     utils.check_required_attrs(
         site.attrs, ("domain", "name", "date_format", "language"),
         entity_slug=site.slug,
         error_callback=error_callback)
-    site.attrs.update(attr_override)
     # Read tags.
     tags_dir = os.path.join(site.site_dir, "tags")
     for tag_dir in utils.subpaths(tags_dir):

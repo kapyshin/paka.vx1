@@ -78,7 +78,9 @@ class TestCase(unittest.TestCase):
 
         overrides_argv = [
             "--site-attr-overrides",
-            "93z_py={}".format(os.path.join(src, "93z_py_attr_overrides"))]
+            "93z_py={}".format(os.path.join(src, "93z_py_attr_overrides")),
+            "--site-attr-overrides",
+            "93z_dev={}".format(os.path.join(src, "93z_dev_attr_overrides"))]
 
         main(argv=[
             "--blognets-dir", nets_dir,
