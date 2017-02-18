@@ -61,10 +61,10 @@ def prepare_sites(
         # with slug and site_dir fields, which we used to make template search
         # path. Now all other fields need to be filled (notes, tags, etc.)
         sites.append(
-                _get_site(
-                    site, current_date=current_date, renderer=renderer,
-                    error_callback=error_callback,
-                    attr_override=attr_overrides.get(site.slug, {})))
+            _get_site(
+                site, current_date=current_date, renderer=renderer,
+                error_callback=error_callback,
+                attr_override=attr_overrides.get(site.slug, {})))
     return _set_up_networks(networks=networks, sites=sites)
 
 
