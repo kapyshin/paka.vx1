@@ -9,7 +9,7 @@ can be configured to do that. When you create lookup (an instance of
 directories to search for templates, encoding of templates, etc.
 Usually it looks like this:
 
-```
+```python3
 import mako.lookup
 
 
@@ -24,7 +24,7 @@ So, how to make lookup, as constructed above, escape rendered expressions?
 In addition to aforementioned arguments, `TemplateLookup` accepts
 `default_filters`—a list of filters to use on expressions by default:
 
-```
+```python3
 import mako.lookup
 
 

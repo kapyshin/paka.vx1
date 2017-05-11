@@ -1,48 +1,48 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>How to create .gz reproducibly ← Notes ← py.93z.org</title><link rel="stylesheet" href="/s/styles.css"><link rel="alternate" type="application/atom+xml" href="/notes/feed/" title="Recent notes from py.93z.org"></head><body><div class="h"><ol class="h-bc"><li><a href="/" rel="home">py.93z.org</a></li><li class="last"><a href="/notes/">Notes</a></li></ol></div><div class="c"><div class="c-i"><div class="c-p"><h1>How to create .gz reproducibly</h1><div class="n-b"><p>Essentially, gzip file consists of “members”, each represented by following diagram:</p><pre><code>+---+---+--+---+---+---+---+---+---+--+     +=========================================+
 |___|___|__|FLG|     MTIME     |___|OS| ... |...original file name, zero-terminated...|
 +---+---+--+---+---+---+---+---+---+--+     +=========================================+
-</code></pre><p>Member parts not relevant to our discussion are not named, shown or described, but, if you want specifics, you can look at <a href="https://tools.ietf.org/html/rfc1952">GZIP file format specification version 4.3 (RFC 1952)</a> and <a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py"><code>gzip</code> module implementation</a>.</p><p><code>FLG</code> is a flag byte that may indicate presence of original file name; as done in Python’s <a href="https://docs.python.org/3.5/library/gzip.html"><code>gzip</code> module</a> (more precisely, in <a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l235"><code>GzipFile._write_gzip_header</code></a>):</p><pre><code>if fname:
-    flags = FNAME
-# ...
-if fname:
-    self.fileobj.write(fname + b'\000')
-</code></pre><p><code>MTIME</code> is “the most recent modification time of the original file being compressed” and “if the compressed data did not come from a file, <code>MTIME</code> is set to the time at which compression started”. In Python optional <code>mtime</code> argument (POSIX timestamp) is taken and <a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l187">set to <code>self._write_mtime</code></a> in <a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l123">constructor of <code>GzipFile</code></a>. Then <code>self._write_mtime</code> is <a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l238">used in <code>_write_gzip_header</code></a> method:</p><pre><code>mtime = self._write_mtime
-if mtime is None:
-    mtime = time.time()
-</code></pre><p>Finally, <code>OS</code> indicates the type of file system, and in Python’s <code>gzip</code> it is <a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l243">set to 255</a>—“Unknown”:</p><pre><code>self.fileobj.write(b'\377')
-</code></pre><p>If you are not sure why 255, <code>b'\377'</code> is <code>0xff</code>, which is indeed 255:</p><pre><code>&gt;&gt;&gt; b'\377'
-b'\xff'
-&gt;&gt;&gt; 0xff
-255
-</code></pre><p>I guess “Unknown” value for <code>OS</code> is hardcoded in <code>gzip</code> library to ensure portability.</p><p>So, when you are making a gzip file, there are two result-influencing factors: original <code>filename</code>s and <code>timestamp</code>s that are kept in members of file (type of filesystem—<code>OS</code>—is set by Python’s <code>gzip</code> library, so no need to worry about it).</p><h2>Implementation</h2><p>Our goal is to build a script (<code>mkgz.py</code>) that creates gzip file containing file pointed to by path passed as a command-line argument.</p><pre><code>#!/usr/bin/env python3
+</code></pre><p>Member parts not relevant to our discussion are not named, shown or described, but, if you want specifics, you can look at <a href="https://tools.ietf.org/html/rfc1952">GZIP file format specification version 4.3 (RFC 1952)</a> and <a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py"><code>gzip</code> module implementation</a>.</p><p><code>FLG</code> is a flag byte that may indicate presence of original file name; as done in Python’s <a href="https://docs.python.org/3.5/library/gzip.html"><code>gzip</code> module</a> (more precisely, in <a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l235"><code>GzipFile._write_gzip_header</code></a>):</p><pre><code><span class="k">if</span> <span class="n">fname</span><span class="p">:</span>
+    <span class="n">flags</span> <span class="o">=</span> <span class="n">FNAME</span>
+<span class="c1"># ...</span>
+<span class="k">if</span> <span class="n">fname</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">fileobj</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">fname</span> <span class="o">+</span> <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\000</span><span class="s1">&#39;</span><span class="p">)</span>
+</code></pre><p><code>MTIME</code> is “the most recent modification time of the original file being compressed” and “if the compressed data did not come from a file, <code>MTIME</code> is set to the time at which compression started”. In Python optional <code>mtime</code> argument (POSIX timestamp) is taken and <a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l187">set to <code>self._write_mtime</code></a> in <a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l123">constructor of <code>GzipFile</code></a>. Then <code>self._write_mtime</code> is <a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l238">used in <code>_write_gzip_header</code></a> method:</p><pre><code><span class="n">mtime</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_write_mtime</span>
+<span class="k">if</span> <span class="n">mtime</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">mtime</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</code></pre><p>Finally, <code>OS</code> indicates the type of file system, and in Python’s <code>gzip</code> it is <a href="https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l243">set to 255</a>—“Unknown”:</p><pre><code><span class="bp">self</span><span class="o">.</span><span class="n">fileobj</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;</span><span class="se">\377</span><span class="s1">&#39;</span><span class="p">)</span>
+</code></pre><p>If you are not sure why 255, <code>b'\377'</code> is <code>0xff</code>, which is indeed 255:</p><pre><code><span class="gp">&gt;&gt;&gt; </span><span class="sa">b</span><span class="s1">&#39;</span><span class="se">\377</span><span class="s1">&#39;</span>
+<span class="go">b&#39;\xff&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="mh">0xff</span>
+<span class="go">255</span>
+</code></pre><p>I guess “Unknown” value for <code>OS</code> is hardcoded in <code>gzip</code> library to ensure portability.</p><p>So, when you are making a gzip file, there are two result-influencing factors: original <code>filename</code>s and <code>timestamp</code>s that are kept in members of file (type of filesystem—<code>OS</code>—is set by Python’s <code>gzip</code> library, so no need to worry about it).</p><h2>Implementation</h2><p>Our goal is to build a script (<code>mkgz.py</code>) that creates gzip file containing file pointed to by path passed as a command-line argument.</p><pre><code><span class="ch">#!/usr/bin/env python3</span>
 
-import gzip
-import shutil
-import argparse
-
-
-def gz(path, *, mtime, filename, dest):
-    with open(path, &quot;rb&quot;) as src_file, open(dest, &quot;wb&quot;) as _dest_file:
-        with gzip.GzipFile(
-                fileobj=_dest_file, mode=&quot;w&quot;,
-                filename=filename, mtime=mtime) as dest_file:
-            shutil.copyfileobj(src_file, dest_file)
+<span class="kn">import</span> <span class="nn">gzip</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
 
 
-if __name__ == &quot;__main__&quot;:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(&quot;path&quot;)
-    parser.add_argument(&quot;--mtime&quot;, type=float, default=None)
-    parser.add_argument(&quot;--filename&quot;, default=None)
-    parser.add_argument(&quot;dest&quot;)
-    args = parser.parse_args()
-    gz(args.path, mtime=args.mtime, filename=args.filename, dest=args.dest)
+<span class="k">def</span> <span class="nf">gz</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mtime</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">dest</span><span class="p">):</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">src_file</span><span class="p">,</span> <span class="nb">open</span><span class="p">(</span><span class="n">dest</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">_dest_file</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">GzipFile</span><span class="p">(</span>
+                <span class="n">fileobj</span><span class="o">=</span><span class="n">_dest_file</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span>
+                <span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span> <span class="n">mtime</span><span class="o">=</span><span class="n">mtime</span><span class="p">)</span> <span class="k">as</span> <span class="n">dest_file</span><span class="p">:</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">copyfileobj</span><span class="p">(</span><span class="n">src_file</span><span class="p">,</span> <span class="n">dest_file</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--mtime&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--filename&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;dest&quot;</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    <span class="n">gz</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">mtime</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">mtime</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">dest</span><span class="p">)</span>
 </code></pre><p>So, having tar archive <code>out1.tar</code>, we could use <code>./mkgz.py out1.tar out1.tar.gz</code> command to create gzip file <code>out1.tar.gz</code>, but it would contain timestamp and filename (command to get such output is <code>file out1.tar.gz</code>):</p><pre><code>out1.tar.gz: gzip compressed data, was &quot;out1.tar&quot;, last modified: Fri Nov 11 00:00:07 2016, max compression
-</code></pre><p>As you may have noticed, <code>mkgz.py</code> can accept <code>--mtime</code> and <code>--filename</code> command-line arguments: they are passed to <a href="https://docs.python.org/3.5/library/gzip.html#gzip.GzipFile"><code>gzip.GzipFile</code></a> constructor. Let’s use these arguments:</p><pre><code>$ ./mkgz.py out2.tar out2.tar.gz --mtime 1.23 --filename ''
-$ file out2.tar.gz
-out2.tar.gz: gzip compressed data, last modified: Thu Jan  1 00:00:01 1970, max compression
-</code></pre><p>As we can see above, timestamp (“last modified”) is set to one we passed as <code>--mtime 1.23</code>. <code>filename</code> is set to empty string.</p><p>Let’s make two more gzip files where only filename will vary:</p><pre><code>$ ./mkgz.py out3.tar out3.tar.gz --mtime 1.23
-$ ./mkgz.py out3.tar out4.tar.gz --mtime 1.23 --filename ''
+</code></pre><p>As you may have noticed, <code>mkgz.py</code> can accept <code>--mtime</code> and <code>--filename</code> command-line arguments: they are passed to <a href="https://docs.python.org/3.5/library/gzip.html#gzip.GzipFile"><code>gzip.GzipFile</code></a> constructor. Let’s use these arguments:</p><pre><code><span class="gp">$</span> ./mkgz.py out2.tar out2.tar.gz --mtime <span class="m">1</span>.23 --filename <span class="s1">&#39;&#39;</span>
+<span class="gp">$</span> file out2.tar.gz
+<span class="go">out2.tar.gz: gzip compressed data, last modified: Thu Jan  1 00:00:01 1970, max compression</span>
+</code></pre><p>As we can see above, timestamp (“last modified”) is set to one we passed as <code>--mtime 1.23</code>. <code>filename</code> is set to empty string.</p><p>Let’s make two more gzip files where only filename will vary:</p><pre><code><span class="gp">$</span> ./mkgz.py out3.tar out3.tar.gz --mtime <span class="m">1</span>.23
+<span class="gp">$</span> ./mkgz.py out3.tar out4.tar.gz --mtime <span class="m">1</span>.23 --filename <span class="s1">&#39;&#39;</span>
 </code></pre><p>If you’ll compare outputs of <code>hd out3.tar.gz | sed 2q</code> and <code>hd out4.tar.gz | sed 2q</code>, you’d see that <code>out3.tar.gz</code> indeed contains filename of <code>out3.tar</code> (while <code>out4.tar.gz</code> does not):</p><pre><code>00000000  1f 8b 08 08 01 00 00 00  02 ff 6f 75 74 33 2e 74  |..........out3.t|
 00000010  61 72 00 ed 9b 41 6e c2  30 10 45 bd f6 29 72 83  |ar...An.0.E..)r.|
 </code></pre><pre><code>00000000  1f 8b 08 00 01 00 00 00  02 ff ed 9b 41 6e c2 30  |............An.0|

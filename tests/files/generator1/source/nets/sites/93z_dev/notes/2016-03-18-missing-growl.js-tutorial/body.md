@@ -16,7 +16,7 @@ settings that define its behaviour. Two types of notifications are defined in de
 
 At the bottom of <a href="demo/main.js"><code>main.js</code></a> there is following:
 
-```
+```js
 var growl = new Growl({
     element: growlEl,
     types: {
@@ -55,7 +55,7 @@ After `Growl` instance is created, you can use it to add notifications
 with shortcuts (e.g. `growl.error("Put the cookie down!")`) or
 with `addNotification` (like I do in `setUpPanel` function in `main.js`):
 
-```
+```js
 var val = messageInputEl.value.trim();
 if (val) {
     growl.addNotification(val, {type: type});  // type is string, like "error" or "success"

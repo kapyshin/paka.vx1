@@ -14,7 +14,7 @@ if you want specifics, you can look at [GZIP file format specification version 4
 Python’s [`gzip` module](https://docs.python.org/3.5/library/gzip.html) (more precisely,
 in [`GzipFile._write_gzip_header`](https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l235)):
 
-```
+```python3
 if fname:
     flags = FNAME
 # ...
@@ -29,7 +29,7 @@ optional `mtime` argument (POSIX timestamp) is taken and [set to `self._write_mt
 in [constructor of `GzipFile`](https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l123).
 Then `self._write_mtime` is [used in `_write_gzip_header`](https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l238) method:
 
-```
+```python3
 mtime = self._write_mtime
 if mtime is None:
     mtime = time.time()
@@ -38,13 +38,13 @@ if mtime is None:
 Finally, `OS` indicates the type of file system, and in Python’s `gzip`
 it is [set to 255](https://hg.python.org/cpython/file/b8233c779ff7/Lib/gzip.py#l243)—“Unknown”:
 
-```
+```python3
 self.fileobj.write(b'\377')
 ```
 
 If you are not sure why 255, `b'\377'` is `0xff`, which is indeed 255:
 
-```
+```pycon3
 >>> b'\377'
 b'\xff'
 >>> 0xff
@@ -64,7 +64,7 @@ Implementation
 Our goal is to build a script (`mkgz.py`) that creates gzip file containing file
 pointed to by path passed as a command-line argument.
 
-```
+```python3
 #!/usr/bin/env python3
 
 import gzip
@@ -102,7 +102,7 @@ As you may have noticed, `mkgz.py` can accept `--mtime` and `--filename` command
 they are passed to [`gzip.GzipFile`](https://docs.python.org/3.5/library/gzip.html#gzip.GzipFile)
 constructor. Let’s use these arguments:
 
-```
+```console
 $ ./mkgz.py out2.tar out2.tar.gz --mtime 1.23 --filename ''
 $ file out2.tar.gz
 out2.tar.gz: gzip compressed data, last modified: Thu Jan  1 00:00:01 1970, max compression
@@ -113,7 +113,7 @@ As we can see above, timestamp (“last modified”) is set to one we passed as 
 
 Let’s make two more gzip files where only filename will vary:
 
-```
+```console
 $ ./mkgz.py out3.tar out3.tar.gz --mtime 1.23
 $ ./mkgz.py out3.tar out4.tar.gz --mtime 1.23 --filename ''
 ```

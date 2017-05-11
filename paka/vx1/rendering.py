@@ -2,8 +2,9 @@ import collections
 
 import mako.lookup
 import mako.template
-from paka import cmark
 from paka.webstatic.htmlmin import htmlmin
+
+from .highlighting import render_commonmark
 
 
 _TemplatePath = collections.namedtuple(
@@ -39,4 +40,4 @@ class _Renderer(object):
                 text, lookup=self._template_lookup).render(**kwargs))
 
     def render_markdown(self, text):
-        return htmlmin(cmark.to_html(text))
+        return htmlmin(render_commonmark(text))

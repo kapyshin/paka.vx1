@@ -7,7 +7,7 @@ because here we’ll do just that: code :)
 Yes, here we are to make a script (`mktgz.py`) that’ll take paths to files
 and dirs and make `.tar.gz`—compressed archive.
 
-```
+```python3
 #!/usr/bin/env python3
 
 import os
@@ -72,7 +72,7 @@ Oh, and if you are puzzled about `reltop`, please read the [note about tar](/not
 
 Example usage:
 
-```
+```console
 $ ./mktgz.py dir1/ file2 dir2/ file1 out.tar.gz --mtime 0 --filename '' --verbose
 dir1/ -> dir1
 dir1/1 -> dir1/1
@@ -97,14 +97,14 @@ file2 -> file2
 
 As we expect, `out.tar.gz` is a gzip file:
 
-```
+```console
 $ file out.tar.gz
 out.tar.gz: gzip compressed data, max compression
 ```
 
 And `tar` also works with `out.tar.gz` as expected:
 
-```
+```console
 $ tar tvf out.tar.gz
 drwxrwxr-x u/u             0 1970-01-01 03:00 dir1/
 drwxrwxr-x u/u             0 1970-01-01 03:00 dir1/1/

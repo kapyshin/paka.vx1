@@ -26,7 +26,7 @@ it [uses](https://hg.python.org/cpython/file/b8233c779ff7/Lib/tarfile.py#l1950)
 the [`os.listdir`](https://docs.python.org/3.5/library/os.html#os.listdir), that returns a list
 of dir entries in arbitrary order—and `TarFile.add` does not sort it nor allow us to do that:
 
-```
+```python3
 for f in os.listdir(name):
     self.add(...)
 ```
@@ -48,7 +48,7 @@ to affect `walk` so it does its work in particular order:
 Thus, code that always traverses all dirs and files in `top_dir` is same order
 will look like this:
 
-```
+```python3
 for dirpath, dirnames, filenames in os.walk(top_dir, topdown=True):
     dirnames.sort()
     # ...
@@ -60,7 +60,7 @@ To add file entries (that is, regular files, dirs, etc.) into archive I’ll use
 [`TarFile.addfile`](https://docs.python.org/3.5/library/tarfile.html#tarfile.TarFile.addfile) instead of
 `TarFile.add`. Therefore, in general, `tarfile`-related code will look like this:
 
-```
+```python3
 with tarfile.open(name="out.tar", mode="w") as archive:
     for path, arcname in ...:
         tinfo = archive.gettarinfo(path, arcname=arcname)
@@ -86,7 +86,7 @@ Implementation
 The goal is to build a script (`mktar.py`) that creates tar archive containing files
 and directories: paths are passed as command-line arguments.
 
-```
+```python3
 #!/usr/bin/env python3
 
 import os

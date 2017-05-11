@@ -38,7 +38,7 @@ Least intrusive change—it’s a fork, after all—is to override two mentioned
 and sort `attrs` there (`_order_attrs`) before passing to implementation of superclass
 (`XMLGenerator`):
 
-```
+```python3
 import operator
 import collections
 from xml.sax.saxutils import XMLGenerator

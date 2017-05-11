@@ -1,95 +1,95 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>How to create .tar.gz reproducibly (putting it together) ← Notes ← py.93z.org</title><link rel="stylesheet" href="/s/styles.css"><link rel="alternate" type="application/atom+xml" href="/notes/feed/" title="Recent notes from py.93z.org"></head><body><div class="h"><ol class="h-bc"><li><a href="/" rel="home">py.93z.org</a></li><li class="last"><a href="/notes/">Notes</a></li></ol></div><div class="c"><div class="c-i"><div class="c-p"><h1>How to create .tar.gz reproducibly (putting it together)</h1><div class="n-b"><p>Though I recommend you to read <a href="/notes/how-to-create-.tar-reproducibly/"><code>.tar</code></a> and <a href="/notes/how-to-create-.gz-reproducibly/"><code>.gz</code></a> notes, where internals and features of these file formats and relevant modules from CPython standard library are discussed, you are free to skip them it you are in rush and need just code, because here we’ll do just that: code :)</p><p>Yes, here we are to make a script (<code>mktgz.py</code>) that’ll take paths to files and dirs and make <code>.tar.gz</code>—compressed archive.</p><pre><code>#!/usr/bin/env python3
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>How to create .tar.gz reproducibly (putting it together) ← Notes ← py.93z.org</title><link rel="stylesheet" href="/s/styles.css"><link rel="alternate" type="application/atom+xml" href="/notes/feed/" title="Recent notes from py.93z.org"></head><body><div class="h"><ol class="h-bc"><li><a href="/" rel="home">py.93z.org</a></li><li class="last"><a href="/notes/">Notes</a></li></ol></div><div class="c"><div class="c-i"><div class="c-p"><h1>How to create .tar.gz reproducibly (putting it together)</h1><div class="n-b"><p>Though I recommend you to read <a href="/notes/how-to-create-.tar-reproducibly/"><code>.tar</code></a> and <a href="/notes/how-to-create-.gz-reproducibly/"><code>.gz</code></a> notes, where internals and features of these file formats and relevant modules from CPython standard library are discussed, you are free to skip them it you are in rush and need just code, because here we’ll do just that: code :)</p><p>Yes, here we are to make a script (<code>mktgz.py</code>) that’ll take paths to files and dirs and make <code>.tar.gz</code>—compressed archive.</p><pre><code><span class="ch">#!/usr/bin/env python3</span>
 
-import os
-import gzip
-import tarfile
-import argparse
-
-
-def tgz(top_paths, *, mtime, dest, reltop, filename, verbose):
-    relpath = lambda p: os.path.relpath(p, start=reltop)
-    def _get_to_add():
-        for top_path in sorted(top_paths):
-            if os.path.isdir(top_path):
-                for dirpath, dirnames, filenames in os.walk(
-                        top_path, topdown=True):
-                    dirnames.sort()
-                    yield (dirpath, relpath(dirpath))
-                    for filename in sorted(filenames):
-                        filepath = os.path.join(dirpath, filename)
-                        yield (filepath, relpath(filepath))
-            else:
-                yield (top_path, relpath(top_path))
-    with open(dest, &quot;wb&quot;) as _dest_file:
-        with gzip.GzipFile(
-                fileobj=_dest_file, mode=&quot;w&quot;,
-                filename=filename, mtime=mtime) as dest_file:
-            with tarfile.open(fileobj=dest_file, mode=&quot;w&quot;) as archive:
-                for path, arcname in _get_to_add():
-                    if verbose:
-                        print(path, &quot;-&gt;&quot;, arcname)
-                    tinfo = archive.gettarinfo(path, arcname=arcname)
-                    if mtime is not None:
-                        tinfo.mtime = mtime
-                    if tinfo.isreg():
-                        with open(path, &quot;rb&quot;) as file:
-                            archive.addfile(tinfo, fileobj=file)
-                    else:
-                        archive.addfile(tinfo)
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">gzip</span>
+<span class="kn">import</span> <span class="nn">tarfile</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
 
 
-if __name__ == &quot;__main__&quot;:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(&quot;paths&quot;, nargs=&quot;+&quot;)
-    parser.add_argument(&quot;--reltop&quot;, default=os.getcwd())
-    parser.add_argument(&quot;--mtime&quot;, type=float, default=None)
-    parser.add_argument(&quot;--filename&quot;, default=None)
-    parser.add_argument(&quot;--verbose&quot;, action=&quot;store_true&quot;, default=False)
-    parser.add_argument(&quot;dest&quot;)
-    args = parser.parse_args()
-    tgz(
-        args.paths, mtime=args.mtime, dest=args.dest, reltop=args.reltop,
-        filename=args.filename, verbose=args.verbose)
-</code></pre><p>Few quick notes about code. First, same <code>mtime</code> value is used for both “tar” and “gzip” parts of code. Second, <a href="https://docs.python.org/3.5/library/gzip.html#gzip.GzipFile"><code>gzip.GzipFile</code></a> is used instead of <a href="https://docs.python.org/3.5/library/gzip.html#gzip.open"><code>gzip.open</code></a> because the latter does not accept <code>filename</code> and <code>mtime</code> arguments. Oh, and if you are puzzled about <code>reltop</code>, please read the <a href="/notes/how-to-create-.tar-reproducibly/">note about tar</a>, <code>reltop</code>’s purpose is explained there.</p><p>Example usage:</p><pre><code>$ ./mktgz.py dir1/ file2 dir2/ file1 out.tar.gz --mtime 0 --filename '' --verbose
-dir1/ -&gt; dir1
-dir1/1 -&gt; dir1/1
-dir1/1/a -&gt; dir1/1/a
-dir1/1/b -&gt; dir1/1/b
-dir1/1/c -&gt; dir1/1/c
-dir1/1/d -&gt; dir1/1/d
-dir1/2 -&gt; dir1/2
-dir1/2/aa -&gt; dir1/2/aa
-dir1/2/bb -&gt; dir1/2/bb
-dir1/2/cc -&gt; dir1/2/cc
-dir1/2/dd -&gt; dir1/2/dd
-dir1/3 -&gt; dir1/3
-dir1/3/aaa -&gt; dir1/3/aaa
-dir1/3/bbb -&gt; dir1/3/bbb
-dir1/3/ccc -&gt; dir1/3/ccc
-dir1/3/ddd -&gt; dir1/3/ddd
-dir2/ -&gt; dir2
-file1 -&gt; file1
-file2 -&gt; file2
-</code></pre><p>As we expect, <code>out.tar.gz</code> is a gzip file:</p><pre><code>$ file out.tar.gz
-out.tar.gz: gzip compressed data, max compression
-</code></pre><p>And <code>tar</code> also works with <code>out.tar.gz</code> as expected:</p><pre><code>$ tar tvf out.tar.gz
-drwxrwxr-x u/u             0 1970-01-01 03:00 dir1/
-drwxrwxr-x u/u             0 1970-01-01 03:00 dir1/1/
--rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/1/a
--rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/1/b
--rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/1/c
--rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/1/d
-drwxrwxr-x u/u             0 1970-01-01 03:00 dir1/2/
--rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/2/aa
--rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/2/bb
--rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/2/cc
--rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/2/dd
-drwxrwxr-x u/u             0 1970-01-01 03:00 dir1/3/
--rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/3/aaa
--rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/3/bbb
--rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/3/ccc
--rw-rw-r-- u/u             7 1970-01-01 03:00 dir1/3/ddd
-drwxrwxr-x u/u             0 1970-01-01 03:00 dir2/
--rw-rw-r-- u/u            10 1970-01-01 03:00 file1
--rw-rw-r-- u/u            17 1970-01-01 03:00 file2
+<span class="k">def</span> <span class="nf">tgz</span><span class="p">(</span><span class="n">top_paths</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mtime</span><span class="p">,</span> <span class="n">dest</span><span class="p">,</span> <span class="n">reltop</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">verbose</span><span class="p">):</span>
+    <span class="n">relpath</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">reltop</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_get_to_add</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">top_path</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">top_paths</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">top_path</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">dirpath</span><span class="p">,</span> <span class="n">dirnames</span><span class="p">,</span> <span class="n">filenames</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span>
+                        <span class="n">top_path</span><span class="p">,</span> <span class="n">topdown</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+                    <span class="n">dirnames</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+                    <span class="k">yield</span> <span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">relpath</span><span class="p">(</span><span class="n">dirpath</span><span class="p">))</span>
+                    <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">filenames</span><span class="p">):</span>
+                        <span class="n">filepath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+                        <span class="k">yield</span> <span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">relpath</span><span class="p">(</span><span class="n">filepath</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="p">(</span><span class="n">top_path</span><span class="p">,</span> <span class="n">relpath</span><span class="p">(</span><span class="n">top_path</span><span class="p">))</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dest</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">_dest_file</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">GzipFile</span><span class="p">(</span>
+                <span class="n">fileobj</span><span class="o">=</span><span class="n">_dest_file</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span>
+                <span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span> <span class="n">mtime</span><span class="o">=</span><span class="n">mtime</span><span class="p">)</span> <span class="k">as</span> <span class="n">dest_file</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">tarfile</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">fileobj</span><span class="o">=</span><span class="n">dest_file</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">archive</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="n">arcname</span> <span class="ow">in</span> <span class="n">_get_to_add</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;-&gt;&quot;</span><span class="p">,</span> <span class="n">arcname</span><span class="p">)</span>
+                    <span class="n">tinfo</span> <span class="o">=</span> <span class="n">archive</span><span class="o">.</span><span class="n">gettarinfo</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">arcname</span><span class="o">=</span><span class="n">arcname</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">mtime</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">tinfo</span><span class="o">.</span><span class="n">mtime</span> <span class="o">=</span> <span class="n">mtime</span>
+                    <span class="k">if</span> <span class="n">tinfo</span><span class="o">.</span><span class="n">isreg</span><span class="p">():</span>
+                        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+                            <span class="n">archive</span><span class="o">.</span><span class="n">addfile</span><span class="p">(</span><span class="n">tinfo</span><span class="p">,</span> <span class="n">fileobj</span><span class="o">=</span><span class="n">file</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">archive</span><span class="o">.</span><span class="n">addfile</span><span class="p">(</span><span class="n">tinfo</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;paths&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--reltop&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">())</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--mtime&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--filename&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--verbose&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;dest&quot;</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    <span class="n">tgz</span><span class="p">(</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">paths</span><span class="p">,</span> <span class="n">mtime</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">mtime</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">dest</span><span class="p">,</span> <span class="n">reltop</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">reltop</span><span class="p">,</span>
+        <span class="n">filename</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">)</span>
+</code></pre><p>Few quick notes about code. First, same <code>mtime</code> value is used for both “tar” and “gzip” parts of code. Second, <a href="https://docs.python.org/3.5/library/gzip.html#gzip.GzipFile"><code>gzip.GzipFile</code></a> is used instead of <a href="https://docs.python.org/3.5/library/gzip.html#gzip.open"><code>gzip.open</code></a> because the latter does not accept <code>filename</code> and <code>mtime</code> arguments. Oh, and if you are puzzled about <code>reltop</code>, please read the <a href="/notes/how-to-create-.tar-reproducibly/">note about tar</a>, <code>reltop</code>’s purpose is explained there.</p><p>Example usage:</p><pre><code><span class="gp">$</span> ./mktgz.py dir1/ file2 dir2/ file1 out.tar.gz --mtime <span class="m">0</span> --filename <span class="s1">&#39;&#39;</span> --verbose
+<span class="go">dir1/ -&gt; dir1</span>
+<span class="go">dir1/1 -&gt; dir1/1</span>
+<span class="go">dir1/1/a -&gt; dir1/1/a</span>
+<span class="go">dir1/1/b -&gt; dir1/1/b</span>
+<span class="go">dir1/1/c -&gt; dir1/1/c</span>
+<span class="go">dir1/1/d -&gt; dir1/1/d</span>
+<span class="go">dir1/2 -&gt; dir1/2</span>
+<span class="go">dir1/2/aa -&gt; dir1/2/aa</span>
+<span class="go">dir1/2/bb -&gt; dir1/2/bb</span>
+<span class="go">dir1/2/cc -&gt; dir1/2/cc</span>
+<span class="go">dir1/2/dd -&gt; dir1/2/dd</span>
+<span class="go">dir1/3 -&gt; dir1/3</span>
+<span class="go">dir1/3/aaa -&gt; dir1/3/aaa</span>
+<span class="go">dir1/3/bbb -&gt; dir1/3/bbb</span>
+<span class="go">dir1/3/ccc -&gt; dir1/3/ccc</span>
+<span class="go">dir1/3/ddd -&gt; dir1/3/ddd</span>
+<span class="go">dir2/ -&gt; dir2</span>
+<span class="go">file1 -&gt; file1</span>
+<span class="go">file2 -&gt; file2</span>
+</code></pre><p>As we expect, <code>out.tar.gz</code> is a gzip file:</p><pre><code><span class="gp">$</span> file out.tar.gz
+<span class="go">out.tar.gz: gzip compressed data, max compression</span>
+</code></pre><p>And <code>tar</code> also works with <code>out.tar.gz</code> as expected:</p><pre><code><span class="gp">$</span> tar tvf out.tar.gz
+<span class="go">drwxrwxr-x u/u             0 1970-01-01 03:00 dir1/</span>
+<span class="go">drwxrwxr-x u/u             0 1970-01-01 03:00 dir1/1/</span>
+<span class="go">-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/1/a</span>
+<span class="go">-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/1/b</span>
+<span class="go">-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/1/c</span>
+<span class="go">-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/1/d</span>
+<span class="go">drwxrwxr-x u/u             0 1970-01-01 03:00 dir1/2/</span>
+<span class="go">-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/2/aa</span>
+<span class="go">-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/2/bb</span>
+<span class="go">-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/2/cc</span>
+<span class="go">-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/2/dd</span>
+<span class="go">drwxrwxr-x u/u             0 1970-01-01 03:00 dir1/3/</span>
+<span class="go">-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/3/aaa</span>
+<span class="go">-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/3/bbb</span>
+<span class="go">-rw-rw-r-- u/u             5 1970-01-01 03:00 dir1/3/ccc</span>
+<span class="go">-rw-rw-r-- u/u             7 1970-01-01 03:00 dir1/3/ddd</span>
+<span class="go">drwxrwxr-x u/u             0 1970-01-01 03:00 dir2/</span>
+<span class="go">-rw-rw-r-- u/u            10 1970-01-01 03:00 file1</span>
+<span class="go">-rw-rw-r-- u/u            17 1970-01-01 03:00 file2</span>
 </code></pre></div></div><div class="c-s"><div class="c-s-s"><h6>Note metadata</h6><dl class="nm-l"><dt>Publication date</dt><dd>November 12, 2016</dd><dt>Tags</dt><dd><ol class="t-l"><li><a href="/tags/cpython/">CPython</a></li></ol></dd></dl></div><div class="c-s-s"><h6>Making .tar.gz reproducibly</h6><ol class="n-l"><li class="a-o"><span class="a">How to create .tar.gz reproducibly (putting it together)</span></li><li><a href="/notes/how-to-create-.gz-reproducibly/">How to create .gz reproducibly</a></li><li><a href="/notes/how-to-create-.tar-reproducibly/">How to create .tar reproducibly</a></li></ol></div><div class="c-s-s"><h6>About</h6><p>This is “all things Python” blog &amp; I hope some notes are helpful.</p></div><div class="c-s-s"><h6>Recent notes</h6><ol class="n-l"><li><a href="/notes/automatic-html-escaping-in-mako/">Automatic &lt;HTML&gt; escaping in Mako</a></li><li class="a-o"><span class="a">How to create .tar.gz reproducibly (putting it together)</span></li><li><a href="/notes/how-to-create-.gz-reproducibly/">How to create .gz reproducibly</a></li><li><a href="/notes/how-to-create-.tar-reproducibly/">How to create .tar reproducibly</a></li><li><a href="/notes/reproducible-builds-and-django.utils.feedgenerator/">Reproducible builds and django.utils.feedgenerator</a></li><li><a href="/notes/how-to-determine-file-where-particular-function-is-defined/">How to determine file where particular function is defined</a></li><li><a href="/notes/python-m-compatibility/">python -m compatibility</a></li><li><a href="/notes/sort-dict-keys-by-values/">Sort dict’s keys by values</a></li></ol><p><a href="/notes/">All notes</a></p></div></div></div></div><div class="f"><div class="f-i"><div class="f-a"><p>© 2010–2017 py.93z.org</p></div><div class="f-s"><ol class="f-nw"><li><a href="//dev.93z.org">dev.93z.org</a></li><li class="a-o"><a href="/" rel="home" class="a">py.93z.org</a></li></ol></div></div></div><script src="/s/scripts.js" type="text/javascript"></script></body></html>

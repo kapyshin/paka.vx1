@@ -1,7 +1,7 @@
 ...at execution time, given that all you have is an instance of function
 object:
 
-```
+```pycon3
 >>> type(func)
 <class 'function'>
 ```
@@ -12,14 +12,14 @@ say, when you are not sure that function you are dealing with is imported from
 
 Most obvious option is to use `co_filename` attribute of function’s code:
 
-```
+```pycon3
 >>> func.__code__.co_filename
 '/home/user/.../something.py'
 ```
 
 This also may work with methods:
 
-```
+```pycon3
 >>> class SomeClass:
 ...     def some_method(self):
 ...         pass
@@ -35,7 +35,7 @@ Usually it’s better to use `inspect.getsourcefile` (that uses `inspect.getfile
 which uses something similar to above, but in more consistent way—for many different
 types):
 
-```
+```pycon3
 >>> import inspect
 >>> inspect.getsourcefile(func)
 '/home/user/.../something.py'
@@ -44,7 +44,7 @@ types):
 But if `func` is defined in CPython extension (that is shared library which uses C API),
 `inspect.getsourcefile` will fail with `TypeError`:
 
-```
+```pycon3
 >>> inspect.getsourcefile(func)
 Traceback (most recent call last):
   File "<stdin>", line 1, in <module>
@@ -57,7 +57,7 @@ TypeError: <built-in function func> is not a module, class, method, function, tr
 
 In such case it is still possible to get file path of `.so`:
 
-```
+```pycon3
 >>> inspect.getfile(inspect.getmodule(func))
 '/home/user/.../lib/python3.4/site-packages/something.cpython-34m.so'
 ```
