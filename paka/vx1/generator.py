@@ -55,7 +55,8 @@ def main(argv=sys.argv[1:]):
     locale.setlocale(locale.LC_ALL, "C")
     parser = argparse.ArgumentParser(prog="paka.vx1")
     parser.add_argument(
-        "--blognets-dir", help="dir containing input data (sites and networks)",
+        "--blognets-dir",
+        help="dir containing input data (sites and networks)",
         required=True)
     parser.add_argument(
         "--build-dir", help="dir that will contain output data",
@@ -78,7 +79,8 @@ def main(argv=sys.argv[1:]):
         help="Unix shell-style pattern for slugs of sites to build")
     parser.add_argument("--cache-dir", required=True, help="dir for cache")
     parser.add_argument(
-        "--current-date", help="date (in %%Y-%%m-%%d format) to use as current")
+        "--current-date",
+        help="date (in %%Y-%%m-%%d format) to use as current")
     parser.add_argument(
         "--features", nargs="*", default=[],
         help="names of build features to turn on")

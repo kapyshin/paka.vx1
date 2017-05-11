@@ -19,13 +19,16 @@ def make_notes_feed(template_context):
     if template_context["is_tag_view"]:
         default_context["tag"] = template_context["tag"]
     base_url = "http://{site.attrs[domain]}".format(site=site)
+
     def _mkurl(path):
         return urljoin(base_url, path)
+
     def _mktr(suffix, **extra_context):
         return translations.translate(
             "_".join((translations_prefix, suffix)),
             context=dict(default_context, **extra_context),
             site=site, escape=False)
+
     try:
         subtitle = _mktr("subtitle")
     except KeyError:

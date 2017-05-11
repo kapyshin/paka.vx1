@@ -14,8 +14,7 @@ from . import utils
 
 REQUIRED_CHUNK_NAMES = [
     "primary_about",
-    "footer_copyrights",
-]
+    "footer_copyrights"]
 for code in errorpages.CODES:
     REQUIRED_CHUNK_NAMES.extend(
         [
@@ -51,7 +50,6 @@ def _make_chunks(site, context, required_chunk_names, error_callback):
     return chunks
 
 
-
 def _sorted_series(tags):
     return sorted(tags, key=lambda tag: tag.attrs["name"])
 
@@ -61,9 +59,13 @@ def _make_breadcrumbs(current_route, context, site):
     lineage = routes_map.get_lineage(current_route)
     if not lineage:
         return
+
     def _make_crumb(route):
         view_name = route.view_name
-        mk_key = lambda suff: "breadcrumbs_{}_{}".format(view_name, suff)
+
+        def mk_key(suff):
+            return "breadcrumbs_{}_{}".format(view_name, suff)
+
         label = translations.translate(
             mk_key("label"), context=context, site=site)
         try:
@@ -76,6 +78,7 @@ def _make_breadcrumbs(current_route, context, site):
             url_path=routes_map.format_url_path(
                 route.view_name, context=context),
             extra={"view_name": view_name})
+
     return breadcrumbs.Bread.from_crumbs(map(_make_crumb, lineage))
 
 
@@ -87,6 +90,7 @@ def _make_page_spec_factory(
         if fmt is not routing.Fmt.direct:
             segments.append("index.{}".format(fmt.value))
         return os.path.join(pages_build_dir, *segments)
+
     def _make_page_spec(view_name, context, substatic=False):
         route = routes_map.find_route_by_view_name(view_name, touch=True)
         url_path = routes_map.format_url_path(
@@ -120,13 +124,17 @@ def _make_page_spec_factory(
             contents = site.renderer(route.template_name, **context)
             path = _make_fs_path(url_path, fmt=route.fmt)
             return _PageSpec(dest_path=path, contents=contents, src_path=None)
+
     return _make_page_spec
 
 
 def _make_extra_template_context(site):
     recent_notes = utils.sort_notes(site.notes)[:10]
-    popular_tags_sorting_key = lambda tag: (
-        -len(tag.notes_slugs), utils.tag_sorting_key(tag))
+
+    def popular_tags_sorting_key(tag):
+        return (
+            -len(tag.notes_slugs), utils.tag_sorting_key(tag))
+
     popular_tags = sorted(
         site.tags.values(), key=popular_tags_sorting_key)[:10]
     return {

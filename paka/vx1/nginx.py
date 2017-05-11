@@ -26,6 +26,7 @@ def _get_servers(specs):
         if not path.endswith("/"):
             return "".join((path, "/"))
         return path
+
     def mk(name, arg="", children=(), level=1):
         def _set_level(children, current_level):
             for ch in children:
@@ -34,6 +35,7 @@ def _get_servers(specs):
                     children=list(_set_level(ch.children, current_level + 1)))
         children = list(_set_level(children, level))
         return Directive(name=name, arg=arg, children=children, level=level)
+
     for spec in sorted(specs, key=lambda spec: spec.site.slug):
         domain = spec.site.attrs["domain"]
         yield (
@@ -68,11 +70,11 @@ def _get_servers(specs):
                     mk("alias", _end_slash(spec.static_build_dir)),
                     mk("expires", "1d"),
                     mk("break"))),
-        ) + tuple(
-            mk(
-                "error_page",
-                "{} {}".format(code, errorpages.make_url_path(code)))
-            for code in sorted(errorpages.CODES))
+            ) + tuple(
+                mk(
+                    "error_page",
+                    "{} {}".format(code, errorpages.make_url_path(code)))
+                for code in sorted(errorpages.CODES))
 
 
 def _get_lines(directive):

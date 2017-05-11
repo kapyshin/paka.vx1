@@ -99,7 +99,8 @@ def add_routes(routes_map, feature_checker):
         template_name="all_tags.html", fmt=Fmt.html, parent_view_name="home")
     routes_map.add_route(
         "/notes/{note.slug}/", view_name="one_note",
-        template_name="one_note.html", fmt=Fmt.html, parent_view_name="all_notes")
+        template_name="one_note.html", fmt=Fmt.html,
+        parent_view_name="all_notes")
     routes_map.add_route(
         "/notes/feed/", view_name="recent_notes_feed",
         template_name="notes_feed.mako", fmt=Fmt.atom,

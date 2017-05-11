@@ -43,6 +43,7 @@ def subpaths_rec(base_dir):
 
 def read_kv(path):
     sep = " " * 2
+
     def _parse_pair(line):
         key_spec, value = line.split(sep, 1)
         key_bits = key_spec.split(":", 1)
@@ -51,6 +52,7 @@ def read_kv(path):
         key, type_ = key_bits
         assert type_ == "html"  # for now, only HTML for explicit type
         return (key, markupsafe.Markup(value))
+
     def _read(path):
         lines = read_file(path).strip().splitlines()
         for line in lines:
@@ -114,7 +116,8 @@ def get_tags(note, site):
             yield tag
 
 
-tag_sorting_key = lambda tag: casefold(tag.attrs["name"])
+def tag_sorting_key(tag):
+    return casefold(tag.attrs["name"])
 
 
 def sort_tags(tags):
