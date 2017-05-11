@@ -3,7 +3,7 @@ import re
 import datetime
 import collections
 
-from . import templates
+from . import rendering
 from . import consts
 from . import utils
 
@@ -53,7 +53,7 @@ def prepare_sites(
             os.path.join(_site_slug_to_network_dir[site.slug], "templates"),
             os.path.join(site.site_dir, "templates"),
             internal_templates_dir]
-        renderer = templates.make_renderer(
+        renderer = rendering.make_renderer(
             charset=consts.CHARSET, prepended=prepended_templates_dirs,
             internal=internal_templates_dirs,
             appended=appended_templates_dirs)
