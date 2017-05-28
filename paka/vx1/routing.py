@@ -19,7 +19,7 @@ class Map(object):
 
     def __init__(self, error_callback):
         self._error_callback = error_callback
-        self._routes = []
+        self._routes = collections.OrderedDict()
 
     def add_route(
             self, url_path_tmpl, view_name, template_name, fmt,
@@ -28,18 +28,20 @@ class Map(object):
             url_path_tmpl=url_path_tmpl, view_name=view_name,
             template_name=template_name, fmt=fmt, touch_marker=[],
             parent_view_name=parent_view_name)
-        self._routes.append(route)
+        self._routes[view_name] = route
         return route
 
     def find_route_by_view_name(self, view_name, touch=False):
-        for route in self._routes:
-            if route.view_name == view_name:
-                if touch and not route.touch_marker:
-                    route.touch_marker.append(1)
-                return route
+        try:
+            route = self._routes[view_name]
+        except KeyError:
+            return
+        if touch and not route.touch_marker:
+            route.touch_marker.append(1)
+        return route
 
     def check_routes(self):
-        for route in self._routes:
+        for route in self._routes.values():
             if not route.url_path_tmpl.startswith("/"):
                 return self._error_callback(
                     "{!r} route does not start with slash!".format(
@@ -56,7 +58,7 @@ class Map(object):
                             route.view_name, parent_view_name))
 
     def check_for_untouched_routes(self):
-        for route in self._routes:
+        for route in self._routes.values():
             if len(route.touch_marker) < 1:
                 return self._error_callback(
                     "{!r} route is not touched!".format(route.view_name))
