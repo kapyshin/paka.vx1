@@ -1,3 +1,6 @@
+import re
+
+import lxml.html
 from pygments import (
     lexers as _lexers, formatters as _formatters,
     highlight as _pygments_highlight)
@@ -44,9 +47,18 @@ def _highlight(fence_info, contents):
     return _pygments_highlight(contents, lexer, _HtmlFormatter())
 
 
+_match_highlighting_comment = re.compile(
+    r"^vx1\.highlighting: (?P<fence_info>[a-zA-Z0-9]+)$").match
+
+
 def _substitute_code_blocks(root, callback):
-    """Walk tree, replace code blocks with HTML returned from callback."""
-    def _invoke_callback(old_node):
+    """Walk tree, replace code blocks with HTML returned from callback.
+
+    In HTML blocks, highlight code in <pre> that have comment
+    <!-- vx1.highlighting: ... --> as first child.
+
+    """
+    def _invoke_code_block_callback(old_node):
         old_contents = _lowlevel.text_from_c(
             _lowlevel.node_get_literal(old_node))
         fence_info = _lowlevel.text_from_c(
@@ -64,6 +76,32 @@ def _substitute_code_blocks(root, callback):
             raise
         _lowlevel.node_free(old_node)
 
+    def _invoke_html_block_callback(node):
+        """Take HTML block, highlight code (if possible), set new literal."""
+        root = lxml.html.fragment_fromstring(
+            _lowlevel.text_from_c(_lowlevel.node_get_literal(node)))
+        for old_el in root.iter("pre"):
+            children = list(old_el)
+            first_child = children[0]
+            if not isinstance(first_child, lxml.html.HtmlComment):
+                continue
+            first_child_match = _match_highlighting_comment(
+                first_child.text.strip())
+            if not first_child_match:
+                continue
+            fence_info = first_child_match.group("fence_info")
+            code = children[1].text_content()
+
+            highlighted = callback(fence_info, code)
+            if highlighted is None:
+                continue
+
+            new_el = lxml.html.fragment_fromstring(highlighted)
+            old_el.getparent().replace(old_el, new_el)
+        new_literal = _lowlevel.text_to_c(
+            lxml.html.tostring(root, encoding="unicode"))
+        assert _lowlevel.node_set_literal(node, new_literal) == 1
+
     iter_ = _lowlevel.iter_new(root)
     try:
         while True:
@@ -74,6 +112,8 @@ def _substitute_code_blocks(root, callback):
                 node = _lowlevel.iter_get_node(iter_)
                 node_type = _lowlevel.node_get_type(node)
                 if node_type == _lowlevel.NODE_CODE_BLOCK:
-                    _invoke_callback(node)
+                    _invoke_code_block_callback(node)
+                elif node_type == _lowlevel.NODE_HTML_BLOCK:
+                    _invoke_html_block_callback(node)
     finally:
         _lowlevel.iter_free(iter_)

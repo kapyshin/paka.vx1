@@ -45,11 +45,21 @@ As you can see, new instance of `Growl` class is created and some options
   <dd>
     <p>If <code>bind</code> is <code>true</code>, growl.js adds shortcuts for <code>addNotification</code> method, so notifications could be added via <code>growl[type of notification]("Hello!", extra settings)</code>.</p>
     <p>Look at code from demo:</p>
-<pre><code>growl.success("Page is loaded.", {timeout: 1000});</code></pre>
+<pre><!-- vx1.highlighting: js --><code>growl.success("Page is loaded.", {timeout: 1000});  // &lt;- test</code></pre>
     <p>This is equivalent to following:</p>
-<pre><code>growl.addNotification("Page is loaded.", {type: "success", timeout: 1000});</code></pre>
+<pre><!-- vx1.highlighting: js --><code>growl.addNotification("Page is loaded.", {
+    type: "success",
+    timeout: 1000
+});</code></pre>
   </dd>
 </dl>
+
+<div>
+  <pre><!-- nope: js --><code>growl.addNotification("Page is loaded.", {
+    type: "success",
+    timeout: 1000
+});</code></pre>
+</div>
 
 After `Growl` instance is created, you can use it to add notifications
 with shortcuts (e.g. `growl.error("Put the cookie down!")`) or

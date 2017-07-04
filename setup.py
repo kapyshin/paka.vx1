@@ -7,7 +7,7 @@ PY2 = sys.version_info.major == 2
 
 def _get_install_requirements():
     requirements = [
-        "six", "mako", "markupsafe", "pygments", "paka.cmark",
+        "six", "mako", "markupsafe", "pygments", "lxml", "paka.cmark",
         "paka.feedgenerator", "paka.webstatic", "paka.breadcrumbs"]
     if PY2:
         requirements.append("enum34")
