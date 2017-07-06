@@ -1,5 +1,6 @@
 import os
 import re
+import warnings
 import datetime
 import collections
 
@@ -202,10 +203,13 @@ def _get_note(note_dir, tags, series, renderer, error_callback):
         entity_slug=slug,
         error_callback=error_callback)
     try:
-        body = renderer.render_text(utils.read_subfile(note_dir, "body"))
-    except IOError:
         body = renderer.render_markdown(
             utils.read_subfile(note_dir, "body.md"))
+    except IOError:
+        body = renderer.render_text(utils.read_subfile(note_dir, "body"))
+        warnings.warn(  # should be visible to tool users
+            "'body' subfile format is deprecated, use 'body.md' ({})".format(
+                os.path.join(note_dir, "body")))
     tags_slugs = {tag.slug for tag in tags if slug in tag.notes_slugs}
     series_slugs = {s.slug for s in series if slug in s.notes_slugs}
     substatic_root, substatic_suffixes = utils.get_substatic_data(note_dir)
