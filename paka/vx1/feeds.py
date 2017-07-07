@@ -1,7 +1,7 @@
+from urllib.parse import urljoin
 import datetime
 
 import pytz
-from six.moves.urllib.parse import urljoin
 from paka.feedgenerator import Atom1Feed
 
 from . import translations

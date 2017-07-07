@@ -5,10 +5,7 @@ import fnmatch
 import tempfile
 import unittest
 import itertools
-try:
-    from functools import lru_cache
-except ImportError:
-    from repoze.lru import lru_cache
+import functools
 
 
 TEST_FILES_DIR = os.path.join(
@@ -35,7 +32,7 @@ class TestCase(unittest.TestCase):
         return temp_dir
 
     # Directory & file comparison.
-    @lru_cache(maxsize=128)
+    @functools.lru_cache(maxsize=128)
     def compile_ignores(self, ignores):
         if not ignores:
             return lambda s: False

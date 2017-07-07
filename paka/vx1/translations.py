@@ -1,4 +1,3 @@
-import six
 import markupsafe
 
 
@@ -14,4 +13,4 @@ def translate(key, context, site, escape=True):
     value = data[key].format(**context).strip()
     if escape:
         value = markupsafe.escape(value)
-    return six.text_type(value)
+    return str(value)

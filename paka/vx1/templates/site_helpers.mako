@@ -145,8 +145,6 @@
 
 <%def name="render_footer_years(site, separator)" filter="trim">
   <%
-      import six
-      str = six.text_type
       ey, cy = site.earliest_year, site.current_year
       years = str(cy) if cy == ey else separator.join((str(ey), str(cy)))
   %>

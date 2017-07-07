@@ -1,21 +1,11 @@
-import sys
 import setuptools
-
-
-PY2 = sys.version_info.major == 2
 
 
 def _get_install_requirements():
     requirements = [
-        "six", "mako", "markupsafe", "pygments", "lxml", "paka.cmark",
+        "mako", "markupsafe", "pygments", "lxml", "paka.cmark",
         "paka.feedgenerator", "paka.webstatic", "paka.breadcrumbs"]
-    if PY2:
-        requirements.append("enum34")
     return requirements
-
-
-def _get_testing_requirements():
-    return ["repoze.lru"] if PY2 else []
 
 
 setuptools.setup(
@@ -23,7 +13,7 @@ setuptools.setup(
     version="2.11.1",
     packages=setuptools.find_packages(),
     install_requires=_get_install_requirements(),
-    extras_require={"testing": _get_testing_requirements()},
+    extras_require={"testing": []},
     include_package_data=True,
     namespace_packages=["paka"],
     zip_safe=False,
@@ -33,12 +23,9 @@ setuptools.setup(
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Other Audience",
         "License :: OSI Approved :: BSD License",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: Implementation :: CPython",
-        "Programming Language :: Python :: Implementation :: PyPy"],
+        "Programming Language :: Python :: Implementation :: CPython"],
     license="BSD",
     author="Pavlo Kapyshin",
     author_email="i@93z.org")
