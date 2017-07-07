@@ -61,6 +61,12 @@ As you can see, new instance of `Growl` class is created and some options
 });</code></pre>
 </div>
 
+<p>Test</p>
+<pre><!-- vx1.highlighting: css --><code>* {
+    margin: 0;
+    padding: 0;
+}</code></pre>
+
 After `Growl` instance is created, you can use it to add notifications
 with shortcuts (e.g. `growl.error("Put the cookie down!")`) or
 with `addNotification` (like I do in `setUpPanel` function in `main.js`):

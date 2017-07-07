@@ -1,3 +1,4 @@
+import io
 import re
 
 import lxml.html
@@ -78,28 +79,31 @@ def _substitute_code_blocks(root, callback):
 
     def _invoke_html_block_callback(node):
         """Take HTML block, highlight code (if possible), set new literal."""
+        def _get_html(body):
+            assert body.tag == "body"
+            for old_el in body.iter("pre"):
+                children = list(old_el)
+                first_child = children[0]
+                if not isinstance(first_child, lxml.html.HtmlComment):
+                    continue
+                first_child_match = _match_highlighting_comment(
+                    first_child.text.strip())
+                if not first_child_match:
+                    continue
+                fence_info = first_child_match.group("fence_info")
+                code = children[1].text_content()
+                highlighted = callback(fence_info, code)
+                new_el = lxml.html.fragment_fromstring(highlighted)
+                old_el.getparent().replace(old_el, new_el)
+            for el in body:
+                yield lxml.html.tostring(el, encoding="unicode")
+
         root = lxml.html.fragment_fromstring(
-            _lowlevel.text_from_c(_lowlevel.node_get_literal(node)))
-        for old_el in root.iter("pre"):
-            children = list(old_el)
-            first_child = children[0]
-            if not isinstance(first_child, lxml.html.HtmlComment):
-                continue
-            first_child_match = _match_highlighting_comment(
-                first_child.text.strip())
-            if not first_child_match:
-                continue
-            fence_info = first_child_match.group("fence_info")
-            code = children[1].text_content()
-
-            highlighted = callback(fence_info, code)
-            if highlighted is None:
-                continue
-
-            new_el = lxml.html.fragment_fromstring(highlighted)
-            old_el.getparent().replace(old_el, new_el)
-        new_literal = _lowlevel.text_to_c(
-            lxml.html.tostring(root, encoding="unicode"))
+            _lowlevel.text_from_c(_lowlevel.node_get_literal(node)),
+            create_parent="body")
+        buf = io.StringIO()
+        buf.writelines(_get_html(root))
+        new_literal = _lowlevel.text_to_c(buf.getvalue())
         assert _lowlevel.node_set_literal(node, new_literal) == 1
 
     iter_ = _lowlevel.iter_new(root)

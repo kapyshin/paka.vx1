@@ -16,7 +16,11 @@
 </code></pre></dd></dl><div><pre><!-- nope: js --><code>growl.addNotification("Page is loaded.", {
     type: "success",
     timeout: 1000
-});</code></pre></div><p>After <code>Growl</code> instance is created, you can use it to add notifications with shortcuts (e.g. <code>growl.error(&quot;Put the cookie down!&quot;)</code>) or with <code>addNotification</code> (like I do in <code>setUpPanel</code> function in <code>main.js</code>):</p><pre><code><span class="kd">var</span> <span class="nx">val</span> <span class="o">=</span> <span class="nx">messageInputEl</span><span class="p">.</span><span class="nx">value</span><span class="p">.</span><span class="nx">trim</span><span class="p">();</span>
+});</code></pre></div><p>Test</p><pre><code><span class="o">*</span> <span class="p">{</span>
+    <span class="k">margin</span><span class="p">:</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">padding</span><span class="p">:</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre><p>After <code>Growl</code> instance is created, you can use it to add notifications with shortcuts (e.g. <code>growl.error(&quot;Put the cookie down!&quot;)</code>) or with <code>addNotification</code> (like I do in <code>setUpPanel</code> function in <code>main.js</code>):</p><pre><code><span class="kd">var</span> <span class="nx">val</span> <span class="o">=</span> <span class="nx">messageInputEl</span><span class="p">.</span><span class="nx">value</span><span class="p">.</span><span class="nx">trim</span><span class="p">();</span>
 <span class="k">if</span> <span class="p">(</span><span class="nx">val</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">growl</span><span class="p">.</span><span class="nx">addNotification</span><span class="p">(</span><span class="nx">val</span><span class="p">,</span> <span class="p">{</span><span class="nx">type</span><span class="o">:</span> <span class="nx">type</span><span class="p">});</span>  <span class="c1">// type is string, like &quot;error&quot; or &quot;success&quot;</span>
 <span class="p">}</span>
