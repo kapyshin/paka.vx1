@@ -1,6 +1,5 @@
 import os
 import re
-import warnings
 import datetime
 import collections
 
