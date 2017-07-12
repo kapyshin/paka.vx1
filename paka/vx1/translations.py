@@ -13,4 +13,4 @@ def translate(key, context, site, escape=True):
     value = data[key].format(**context).strip()
     if escape:
         value = markupsafe.escape(value)
-    return str(value)
+    return value
