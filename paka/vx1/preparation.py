@@ -85,9 +85,9 @@ def _get_networks(networks_dir, error_callback):
             logo_path=_make_logo_path(network_dir))
         network.sites_slugs.extend(
             utils.read_slugs(network_dir, "sites-slugs"))
-        if len(network.sites_slugs) < 2:
+        if len(network.sites_slugs) < 1:
             error_callback(
-                "{!r} network has less than two sites!".format(network.slug))
+                "{!r} network has less than one site!".format(network.slug))
         network.chunks_data.update(utils.read_chunks(network_dir))
         network.translations_data.update(utils.read_translations(network_dir))
         return network
