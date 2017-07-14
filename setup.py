@@ -11,7 +11,7 @@ def _get_install_requirements():
 setuptools.setup(
     name="paka.vx1",
     description="Static blog generator.",
-    version="3.2.0",
+    version="3.3.0",
     packages=setuptools.find_packages(),
     install_requires=_get_install_requirements(),
     extras_require={"testing": []},
