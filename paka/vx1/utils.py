@@ -117,7 +117,7 @@ def get_tags(note, site):
 
 
 def tag_sorting_key(tag):
-    return casefold(tag.attrs["name"])
+    return tag.attrs["name"].casefold()
 
 
 def sort_tags(tags):
@@ -136,9 +136,3 @@ def get_substatic_data(obj_dir):
             for subpath in subpaths_rec(root)]
         return root, suffixes
     return None, []
-
-
-def casefold(s):
-    if hasattr(s, "casefold"):
-        return s.casefold()
-    return s.lower()  # pragma: no cover
