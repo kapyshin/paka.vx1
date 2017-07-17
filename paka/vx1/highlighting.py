@@ -32,8 +32,7 @@ class _HtmlFormatter(_formatters.HtmlFormatter):
 
     def wrap(self, source, outfile):
         yield (0, "<pre><code>")
-        for tup in source:
-            yield tup
+        yield from source
         yield (0, "</code></pre>")
 
 

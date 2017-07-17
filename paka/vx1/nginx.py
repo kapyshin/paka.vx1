@@ -85,8 +85,7 @@ def _get_lines(directive):
     if directive.children:
         yield (tmpl_prefix + " {{").format(d=directive, wsp=wsp)
         for child in directive.children:
-            for line in _get_lines(child):
-                yield line
+            yield from _get_lines(child)
         yield "{wsp}}}".format(wsp=wsp)
     else:
         yield (tmpl_prefix + ";").format(d=directive, wsp=wsp)

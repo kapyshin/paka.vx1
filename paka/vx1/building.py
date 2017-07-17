@@ -193,11 +193,9 @@ def _generate_pages_specs(
             "series_to_notes": series_to_notes}
         view_name = "one_note"
         yield mk(view_name=view_name, context=context)
-        for spec in mk(
-                view_name=view_name,
-                context=dict(context, substatic_object=note),
-                substatic=True):
-            yield spec
+        yield from mk(
+            view_name=view_name, context=dict(context, substatic_object=note),
+            substatic=True)
     yield mk(
         view_name="recent_notes_feed",
         context={
