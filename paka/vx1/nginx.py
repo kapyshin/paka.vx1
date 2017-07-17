@@ -94,10 +94,7 @@ def _get_lines(directive):
 
 def build_nginx_config(specs, build_dir):
     nginx_config_path = os.path.join(build_dir, "etc", "nginx.conf")
-    try:
-        os.makedirs(os.path.dirname(nginx_config_path))
-    except OSError:
-        pass
+    os.makedirs(os.path.dirname(nginx_config_path), exist_ok=True)
     lines = []
     for server in _get_servers(specs):
         lines.append("server {")

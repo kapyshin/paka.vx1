@@ -229,10 +229,7 @@ def build_site_by_spec(site_spec, feature_checker, error_callback):
         dest_path = page_spec.dest_path
         contents = page_spec.contents
         assert contents is not None or src_path
-        try:
-            os.makedirs(os.path.dirname(dest_path))
-        except OSError:
-            pass
+        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
         if contents is not None:
             utils.write_file(dest_path, contents)
         else:

@@ -5,10 +5,7 @@ import subprocess
 
 
 def build_icons(specs, error_callback, cache_dir):
-    try:
-        os.makedirs(cache_dir)
-    except OSError:
-        pass
+    os.makedirs(cache_dir, exist_ok=True)
     for spec in specs:
         in_path = _get_existing_logo_file_path(
             spec.site, error_callback=error_callback)
