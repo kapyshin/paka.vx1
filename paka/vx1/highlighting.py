@@ -8,7 +8,7 @@ from pygments import (
 from paka.cmark import lowlevel as _lowlevel
 
 
-_OPTS = _lowlevel.OPT_DEFAULT | _lowlevel.OPT_NOBREAKS
+_OPTS = _lowlevel.OPT_DEFAULT | _lowlevel.OPT_NOBREAKS | _lowlevel.OPT_UNSAFE
 
 
 def render_commonmark(text):
